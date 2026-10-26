@@ -1,0 +1,1336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Live Call Assist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: call console. The card being read on the left; objections, qualification, persona and notes on the right. Stacks on narrow screens.
+   Colours and font follow truckerpath.com: Poppins, navy #011932, brand blue #1688CA. */
+:root {
+  /* Brand colours: change these to re-skin the tool */
+  --bg: #F0F3F4;
+  --surface: #FFFFFF;
+  --ink: #011932;
+  --muted: #525C66;
+  --line: #E2E6E9;
+  --header: #011932;
+  --accent: #1688CA;
+  --accent-strong: #146FA3;
+  --accent-soft: #E6F4FB;
+  --on-accent: #FFFFFF;
+  --go: #12805C;
+  --go-soft: #E3F4EC;
+  --warn: #9A5A00;
+  --warn-soft: #FDF1DC;
+  --stop: #C0362C;
+  --stop-soft: #FCE8E6;
+  --shadow: 0 1px 2px rgba(1, 25, 50, .06), 0 2px 8px rgba(1, 25, 50, .07);
+  --shadow-hover: 0 2px 4px rgba(1, 25, 50, .08), 0 6px 16px rgba(1, 25, 50, .12);
+
+  --font-body: "Poppins", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #00101D; --surface: #0E2235; --ink: #F0F3F4; --muted: #9AA6B2; --line: #1F3A55; --header: #000A14;
+    --accent-soft: #0F3350; --go: #5FD3A2; --go-soft: #0F3328; --warn: #F2B85C; --warn-soft: #3A2A10;
+    --stop: #FF8A80; --stop-soft: #3D1A17;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 2px 8px rgba(0, 0, 0, .25);
+    --shadow-hover: 0 2px 4px rgba(0, 0, 0, .35), 0 6px 16px rgba(0, 0, 0, .35);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #00101D; --surface: #0E2235; --ink: #F0F3F4; --muted: #9AA6B2; --line: #1F3A55; --header: #000A14;
+  --accent-soft: #0F3350; --go: #5FD3A2; --go-soft: #0F3328; --warn: #F2B85C; --warn-soft: #3A2A10;
+  --stop: #FF8A80; --stop-soft: #3D1A17;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 2px 8px rgba(0, 0, 0, .25);
+  --shadow-hover: 0 2px 4px rgba(0, 0, 0, .35), 0 6px 16px rgba(0, 0, 0, .35);
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 15px/1.55 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px 32px;
+}
+button, input, textarea { font: inherit; color: inherit; }
+button { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: no-preference) {
+  .opt, .btn, .obj-btn, .pain, .mode, .tab { transition: background-color .15s, border-color .15s, box-shadow .15s, transform .15s; }
+}
+
+/* Header: navy bar like truckerpath.com */
+.top {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
+  background: var(--header); color: #FFFFFF; border-radius: var(--radius);
+  padding: 12px 16px; margin-bottom: 16px;
+}
+.brand { display: flex; align-items: baseline; gap: 10px; font-weight: 700; font-size: 1.15rem; letter-spacing: -0.01em; }
+.brand small { font-weight: 500; font-size: .95rem; color: #9FD8F7; }
+.modes { display: flex; border-radius: 999px; padding: 3px; gap: 3px; background: rgba(255, 255, 255, .1); }
+.mode { border: 0; background: transparent; border-radius: 999px; padding: 6px 16px; cursor: pointer; font-weight: 600; font-size: .88rem; color: #C9D3DC; }
+.mode:hover { color: #FFFFFF; }
+.mode[aria-pressed="true"] { background: var(--accent); color: #FFFFFF; }
+.campaign { font-size: .85rem; color: #C9D3DC; }
+.draft-pill { background: #FDF1DC; color: #7A4700; font-weight: 600; font-size: .78rem; padding: 4px 10px; border-radius: 999px; }
+.top-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.timer { font-weight: 600; font-size: 1.05rem; font-variant-numeric: tabular-nums; color: #C9D3DC; }
+.timer.live { color: #7FD1FA; }
+.top .btn { background: transparent; color: #FFFFFF; border-color: rgba(255, 255, 255, .35); box-shadow: none; }
+.top .btn:hover:not(:disabled) { background: rgba(255, 255, 255, .1); border-color: #FFFFFF; }
+.top .btn.danger { background: var(--stop); border-color: var(--stop); }
+
+/* Generic buttons: pill, like the site */
+.btn {
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px;
+  padding: 8px 18px; cursor: pointer; font-weight: 600; box-shadow: var(--shadow);
+}
+.btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.btn:disabled { opacity: .45; cursor: default; box-shadow: none; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary:hover:not(:disabled) { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--on-accent); }
+.btn.danger { color: var(--stop); border-color: var(--stop); }
+
+/* Grid */
+.console { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .console { grid-template-columns: minmax(0, 1fr); } }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+.label { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+
+/* Card */
+.card { padding: 24px; display: grid; gap: 18px; }
+.card.objection { border: 2px solid var(--accent); }
+.card.end { border: 2px solid var(--ink); }
+.card.end.stopcard { border-color: var(--stop); }
+.card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.step { font-weight: 600; font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.chip { font-size: .76rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+.chip.obj { background: var(--accent-soft); color: var(--accent-strong); }
+.chip.persona { background: var(--accent-soft); color: var(--accent-strong); }
+.chip.branch { background: var(--bg); color: var(--muted); }
+.chip.done { background: var(--ink); color: var(--surface); }
+.chip.stopped { background: var(--stop-soft); color: var(--stop); }
+.progress { display: flex; gap: 3px; flex: 1 1 140px; max-width: 300px; }
+.progress span { height: 5px; flex: 1; border-radius: 3px; background: var(--line); }
+.progress span.on { background: var(--accent); }
+.card h1 { font-weight: 700; font-size: 1.6rem; line-height: 1.2; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 14px; cursor: pointer; font-size: .88rem; font-weight: 500; }
+.tab:hover { border-color: var(--accent); }
+.tab[aria-selected="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+.script { font-size: 1.4rem; line-height: 1.55; max-width: 38em; margin: 0; white-space: pre-line; }
+.script .fillin { color: inherit; }
+
+.note {
+  display: flex; gap: 10px; align-items: baseline; font-size: .93rem;
+  background: var(--bg); border-radius: 10px; padding: 10px 14px;
+}
+.note b { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); flex: none; font-weight: 600; }
+.note.guard { background: var(--stop-soft); }
+.note.guard b { color: var(--stop); }
+.note.gate { background: var(--warn-soft); }
+.note.gate b { color: var(--warn); }
+.note.gate.ok { background: var(--accent-soft); }
+.note.gate.ok b { color: var(--accent-strong); }
+
+/* Checklists (pains, demo details) */
+.pains { display: grid; gap: 8px; }
+.pain {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+  text-align: left; cursor: pointer; padding: 12px 16px; border-radius: 12px;
+  border: 1.5px solid var(--line); background: var(--surface); box-shadow: var(--shadow);
+}
+.pain::before {
+  content: ""; width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--line); background: var(--surface);
+}
+.pain:hover { border-color: var(--accent); box-shadow: var(--shadow-hover); }
+.pain .pq { font-size: 1.05rem; }
+.pain .pl { font-size: .8rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.pain[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.pain[aria-pressed="true"]::before {
+  background: var(--accent); border-color: var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.pain[aria-pressed="true"] .pl { color: var(--accent-strong); }
+@media (max-width: 560px) { .pain { grid-template-columns: auto 1fr; } .pain .pl { grid-column: 2; } }
+
+/* Answer buttons: the main path is solid brand blue; everything else is a white button */
+.options { display: grid; gap: 10px; }
+.opt {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px;
+  text-align: left; cursor: pointer; padding: 13px 16px; border-radius: 12px;
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); box-shadow: var(--shadow);
+}
+.opt:hover { border-color: var(--accent); box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+.opt:active { transform: translateY(0); box-shadow: var(--shadow); }
+.opt.go { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.opt.go:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+.opt .key {
+  font-weight: 600; font-size: .85rem; width: 28px; height: 28px; display: grid; place-items: center;
+  border-radius: 8px; background: var(--bg); color: var(--muted);
+}
+.opt.go .key { background: rgba(255, 255, 255, .22); color: var(--on-accent); }
+.opt.stop .lbl { color: var(--stop); }
+.opt .lbl { font-weight: 600; font-size: 1.02rem; }
+.opt .sub { font-size: .82rem; color: var(--muted); }
+.opt .marks { font-size: .8rem; font-weight: 600; color: var(--go); }
+.opt .marks .neg { color: var(--stop); }
+.opt.go .sub, .opt.go .marks, .opt.go .marks .neg, .opt.go .dest { color: rgba(255, 255, 255, .85); }
+.opt .dest { font-size: .82rem; color: var(--muted); text-align: right; }
+@media (max-width: 560px) {
+  .opt { grid-template-columns: auto 1fr; }
+  .opt .dest { grid-column: 2; text-align: left; }
+}
+
+.card-foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.hint { font-size: .82rem; color: var(--muted); }
+kbd { font: 600 .75rem var(--font-body); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; background: var(--surface); }
+
+/* Side */
+.side { display: grid; gap: 14px; }
+.obj-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.obj-btn {
+  text-align: left; cursor: pointer; border: 1.5px solid var(--line); background: var(--surface); box-shadow: var(--shadow);
+  border-radius: 10px; padding: 9px 11px; font-weight: 600; font-size: .85rem; line-height: 1.3;
+}
+.obj-btn:hover { border-color: var(--accent); color: var(--accent-strong); box-shadow: var(--shadow-hover); }
+.obj-btn[aria-current="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.obj-btn.dnc { color: var(--stop); }
+.obj-btn.dnc:hover { border-color: var(--stop); color: var(--stop); }
+
+.qual-group { margin-top: 10px; display: grid; gap: 5px; }
+.qual-group h3 { margin: 6px 0 2px; font-size: .86rem; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+.qual-group h3 span { font-size: .8rem; color: var(--muted); font-weight: 500; }
+.qrow {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%;
+  border: 0; background: transparent; padding: 3px 0; cursor: pointer; text-align: left; font-size: .9rem;
+}
+.state { font-size: .74rem; font-weight: 600; padding: 2px 10px; border-radius: 999px; min-width: 70px; text-align: center; }
+.state.unknown { background: var(--bg); color: var(--muted); }
+.state.yes { background: var(--go-soft); color: var(--go); }
+.state.no { background: var(--stop-soft); color: var(--stop); }
+.small { font-size: .8rem; color: var(--muted); margin: 8px 0 0; }
+
+.persona-box dl { margin: 8px 0 0; display: grid; gap: 6px; font-size: .88rem; }
+.persona-box dt { font-weight: 600; font-size: .78rem; color: var(--muted); }
+.persona-box dd { margin: 0; }
+.persona-box h3 { margin: 6px 0 0; font-weight: 700; font-size: 1.02rem; }
+
+.log { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 5px; font-size: .85rem; max-height: 200px; overflow-y: auto; }
+.log li { display: grid; grid-template-columns: 1.7em 1fr; gap: 4px; }
+.log .n { font-weight: 600; font-size: .76rem; color: var(--muted); padding-top: 2px; }
+.log .c { color: var(--muted); }
+#notes { width: 100%; min-height: 100px; margin-top: 8px; border: 1.5px solid var(--line); background: var(--bg); border-radius: 10px; padding: 10px; resize: vertical; }
+#notes:focus { border-color: var(--accent); outline: none; }
+.copy-row { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.status { font-size: .82rem; color: var(--go); }
+#copyFallback { width: 100%; min-height: 140px; margin-top: 8px; font-size: .82rem; }
+
+details.never summary { cursor: pointer; font-weight: 600; color: var(--stop); }
+details.never ul { margin: 8px 0 0; padding-left: 1.1em; font-size: .88rem; display: grid; gap: 4px; }
+
+.footnote { color: var(--muted); font-size: .82rem; margin-top: 18px; max-width: 75ch; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <span class="brand">Trucker Path <small>Live Call Assist</small></span>
+  <div class="modes" id="modes" role="group" aria-label="Call type"></div>
+  <span class="campaign" id="campaign"></span>
+  <span class="draft-pill" id="draftPill">Draft. Verify with a sales lead before live calls.</span>
+  <div class="top-right">
+    <span class="timer" id="timer" title="Call timer">00:00</span>
+    <button class="btn" id="newCall" type="button">New call</button>
+  </div>
+</header>
+
+<main class="console">
+  <section class="panel card" id="card" aria-live="polite"></section>
+
+  <aside class="side">
+    <section class="panel" aria-labelledby="objLabel">
+      <div class="label" id="objLabel">Objections</div>
+      <div class="obj-list" id="objList"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="qualLabel">
+      <div class="label" id="qualLabel">Qualification</div>
+      <div id="quals"></div>
+      <p class="small">Updates from the answers you pick. Click any row to correct it.</p>
+    </section>
+
+    <section class="panel persona-box" id="personaBox" aria-labelledby="personaLabel" hidden>
+      <div class="label" id="personaLabel">Who you're talking to</div>
+      <div id="personaBody"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="notesLabel">
+      <div class="label" id="notesLabel">Call notes</div>
+      <ol class="log" id="log"></ol>
+      <textarea id="notes" placeholder="Specifics for the handoff: truck count, tools, their words on the pain, meeting time and time zone, email. Never put payment card details here."></textarea>
+      <div class="copy-row">
+        <button class="btn primary" id="copyBtn" type="button">Copy call summary</button>
+        <span class="status" id="copyStatus" role="status"></span>
+      </div>
+      <textarea id="copyFallback" hidden readonly></textarea>
+    </section>
+
+    <section class="panel">
+      <details class="never">
+        <summary>Never promise</summary>
+        <ul id="neverList"></ul>
+      </details>
+    </section>
+  </aside>
+</main>
+
+<p class="footnote">Nothing is saved. Closing this tab clears the call. Grey text in [brackets] is for you to fill in as you speak. The copied summary is a rep-entered call summary, not a transcript.</p>
+
+<script>
+/* =====================================================================
+   SCRIPT DATA: edit this section to change the call.
+   Built from "Trucker Path / NavPro Sales Knowledge for a Call-Script Tool".
+   That file is background knowledge, not an approved verbatim script.
+
+   {key} in a script shows as a [reminder] using the wording in PLACEHOLDERS.
+   [Any bracketed text] shows as a fill-in reminder.
+   Option fields:
+     next     card id, "obj:<id>", or "resume" (back to the script after an objection)
+     tone     "go" green, "warn" amber, "stop" red
+     persona  sets who is on the call (see PERSONAS)
+     bant     e.g. { need: "yes" }   (budget, authority, need, timeline)
+     sop      e.g. { pain: "yes" }   (fleet, dm, pain, timeline, budget)
+   Card fields: script or variants, byPersona (script per persona), note, guard, gate, end.
+   ===================================================================== */
+const DRAFT = true;
+const CAMPAIGN = { name: "NavPro outbound, 3+ trucks", minTrucks: 3 };
+
+const PLACEHOLDERS = {
+  trucks: "number of trucks",
+  freight: "freight / lanes",
+  process: "how routes reach drivers today",
+  pain: "their pain, in their words",
+  impact: "how often / what it costs them",
+  stack: "navigation / ELD / TMS",
+  decision: "who decides and who'll attend",
+  timing: "their timing",
+  seats: "trucks / seats in scope",
+  meeting: "date, time and time zone",
+  email: "work email",
+};
+
+const PERSONAS = {
+  owner: {
+    label: "Owner / Founder",
+    concerns: "Costs, fuel, driver retention, operating visibility, growing without losing control.",
+    explore: "Where time or cost is lost. How they see what's happening across the fleet. Who approves spend.",
+    angle: "Fleet visibility, consistent route workflows, looking at operating costs they give you.",
+    guard: "Don't promise savings or ROI.",
+  },
+  ops: {
+    label: "Fleet manager / Ops",
+    concerns: "Cost per mile, utilization, coaching, visibility, systems fit, rollout.",
+    explore: "Planned vs actual routes, how exceptions get reviewed, what rollout would need.",
+    angle: "Routing profiles, dispatch workflow, fleet visibility, driver performance reporting, if they confirm it matters.",
+    guard: "Don't assume what they own from the title.",
+  },
+  safety: {
+    label: "Safety manager",
+    concerns: "Route consistency, truck restrictions, safety processes, inspections, coaching.",
+    explore: "How truck dimensions and restrictions are handled. How route deviations surface. How incidents are reviewed.",
+    angle: "Truck-specific routing, and visibility for review and coaching.",
+    guard: "Never guarantee safety, crash prevention or compliance, or say it replaces safety policy or training.",
+  },
+  dispatcher: {
+    label: "Dispatcher",
+    concerns: "Finding drivers, ETAs, address changes, manual calls and texts, route execution.",
+    explore: "How a route reaches a driver. What happens when an address changes. How much calling it creates.",
+    angle: "Route dispatch, visibility, fewer manual handoffs, only where they've said it's a pain.",
+    guard: "Don't guarantee less workload.",
+  },
+  driver: {
+    label: "Driver",
+    concerns: "Navigation and day-to-day usability. Often a user, not a buyer.",
+    explore: "What navigation they use and what's difficult. Who manages routing and buying.",
+    angle: "Ask for an introduction to whoever runs routing. No pressure.",
+    guard: "Don't push a driver into a buying conversation.",
+  },
+  gatekeeper: {
+    label: "Office contact / other",
+    concerns: "Their time. They're not the buyer.",
+    explore: "Who manages truck routing or dispatch, and how to reach them.",
+    angle: "Be brief and respectful.",
+    guard: "Don't treat them as the decision maker.",
+  },
+};
+
+const NEVER_PROMISE = [
+  "A price, savings, ROI, discount, pilot, contract term, deployment timeline or free offer.",
+  "A named integration or feature for a specific provider or version. Check the current integration matrix.",
+  "Guaranteed safety, accident or bridge-strike prevention, compliance, or no violations.",
+  "That NavPro replaces a TMS, accounting, dashcam, maintenance or ELD product. It works alongside a supported ELD/TMS.",
+  "Any capability, roadmap item, customer result or statistic you haven't verified. Say you'll check.",
+];
+
+// A cold call sells the next conversation. Keep discovery to what the booking checklist needs; the deep dive is the demo.
+const MAIN_FLOW = ["opener", "reason", "pitch", "fleet", "discovery", "decision", "timeline", "budget", "book", "confirm"];
+
+// Shown on every objection card.
+const OBJECTION_RULE = "Pause. Acknowledge with a ledge line. Ask one question. Don't argue, and don't repeat the rebuttal.";
+
+// Discovery: each pain has the question that brings it out, and the value line used in the demo pitch
+// when the lead confirms it. business: true = Business tier only.
+const PAINS = {
+  fuel:       { label: "Fuel", q: "What did fuel cost you last month? And who chooses where drivers fuel?",
+                pitch: "You mentioned fuel... NavPro builds a fuel plan right into the driver's app, and dispatch can show only your approved fuel stops, so drivers aren't buying wherever.", business: true },
+  tolls:      { label: "Tolls", q: "And tolls, roughly what are those running you a month?",
+                pitch: "On tolls... you can compare routes and set areas to avoid, so drivers aren't defaulting to toll roads. One of our customers, Keller Trucking, says their tolls went from about $84K to about $40K in a month." },
+  restricted: { label: "Bridges / restricted roads / tickets", q: "In the past year, any bridge strikes, restricted-road tickets, or a driver ending up somewhere the truck shouldn't be?",
+                pitch: "On the bridge and restricted-road side... every route is built around the truck's height, weight, length and axles, and you can block low bridges and restricted corridors." },
+  insurance:  { label: "Insurance / CSA", q: "How are insurance premiums and CSA scores looking this year?",
+                pitch: "On insurance and CSA... you get truck-safe routes plus live weather, traffic and hazard alerts, and driver performance reports, so you can coach before it turns into a violation.", business: true },
+  parking:    { label: "Parking", q: "How do your drivers find parking at night?",
+                pitch: "On parking... your drivers see parking availability, truck stops and weigh station status along the route, from the same network over a million drivers use every month." },
+  lastmile:   { label: "Lost at shipper / receiver", q: "Do drivers ever get turned around at the shipper or receiver, looking for the right gate?",
+                pitch: "At the shipper and receiver... drivers get directions right to the dock, and you can save your own locations, so fewer \"where's the gate?\" calls." },
+  tracking:   { label: "Calling drivers for location / ETA", q: "How do you know where a driver is and when they'll arrive? How many calls a day does that take?",
+                pitch: "And instead of calling drivers all day... you see every truck on a live map with ETAs." },
+  ifta:       { label: "IFTA", q: "How do you handle IFTA today?",
+                pitch: "And IFTA... mileage gets tracked automatically, so it's not a month-end scramble.", business: true },
+  eld:        { label: "Uses an ELD / TMS", q: "What ELD and TMS are you using?",
+                pitch: "And it works alongside your ELD... it connects with over 30 of them, so you're not replacing anything." },
+};
+
+// Which questions to show first for each role.
+const PAIN_ORDER = {
+  owner:      ["fuel", "insurance", "tolls", "parking", "ifta", "tracking", "restricted", "lastmile", "eld"],
+  ops:        ["fuel", "tolls", "tracking", "eld", "ifta", "restricted", "insurance", "parking", "lastmile"],
+  safety:     ["restricted", "insurance", "parking", "lastmile", "tracking", "fuel", "tolls", "ifta", "eld"],
+  dispatcher: ["tracking", "lastmile", "parking", "fuel", "restricted", "tolls", "eld", "ifta", "insurance"],
+  default:    ["fuel", "tolls", "restricted", "insurance", "parking", "lastmile", "tracking", "ifta", "eld"],
+};
+
+// Starting list prices by fleet size (Trucker Path marketing). The AE confirms the actual quote.
+const PRICES = { "1-2": "$29.99 a month", "3-10": "$79 a month", "11-50": "$199 a month" };
+const SIZE_LABEL = { "1-2": "1–2 trucks", "3-10": "3–10 trucks", "11-50": "11–50 trucks", "50+": "50+ trucks" };
+
+// What the AE will show on the demo for each pain (used on the inbound wrap-up card).
+const DEMO_LINES = {
+  fuel: "how a fuel plan and your approved fuel stops would look against what you're spending on fuel now",
+  tolls: "how comparing routes and avoiding toll areas could bring down what you're paying in tolls",
+  restricted: "how truck profiles keep every route built around your trucks' height, weight and length",
+  tracking: "how you'd see every truck and ETA on one live map, without calling drivers",
+  parking: "how your drivers would see parking and truck stops ahead on their route",
+  ifta: "how IFTA mileage gets tracked for you automatically",
+  insurance: "how truck-safe routes, hazard alerts and driver reports can help on the safety side",
+  lastmile: "how drivers get directions right to the dock at your shippers and receivers",
+  eld: "how it would connect with the ELD you already use",
+};
+
+// Inbound lead flow (they came to us): book the demo first, qualify after.
+const INBOUND_FLOW = ["in_opener", "in_why", "in_trucks", "in_role", "in_details", "in_wrap"];
+const MODES = { outbound: { label: "Cold call", main: MAIN_FLOW }, inbound: { label: "Inbound lead", main: INBOUND_FLOW } };
+
+
+const flow = {
+  opener: {
+    title: "Opener",
+    variants: [
+      { label: "Who's in charge?", script: "Hey, who's in charge of truck routing and dispatch at [company]?" },
+      { label: "Permission", script: "Hi [first name], this is [your name] with Trucker Path. I know I'm calling out of the blue. Mind if I take 30 seconds to tell you why I called, and you can tell me if it's worth continuing?" },
+      { label: "Tailored trigger", script: "Hi [first name], [your name] with Trucker Path. I saw [a specific trigger: new location, dispatcher job post, fleet growth], and that's actually why I'm calling. Mind if I take 30 seconds to tell you why, and you tell me if it's worth continuing?" },
+      { label: "How have you been?", script: "Hi [first name], it's [your name] with Trucker Path. How have you been?" },
+    ],
+    note: "Sound confident and lead the call. With \"How have you been?\", don't make small talk: go straight to your reason after they answer.",
+    guard: "Never open with \"Did I catch you at a bad time?\" It hands them an easy exit.",
+    options: [
+      { label: "That's me", ack: "Oh, you are? Awesome. So yeah, it's just [your name] here.", next: "reason", tone: "go" },
+      { label: "\"May I know why you're calling?\"", next: "gatekeeper_why", tone: "warn" },
+      { label: "Someone else is in charge", next: "gatekeeper", tone: "warn" },
+      { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
+      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
+      { label: "How did you get my number?", next: "obj:how_number", tone: "warn" },
+    ],
+  },
+  reason: {
+    title: "Why you're calling + their role",
+    script:
+      "Quick background... (deliberate) we're Trucker Path, one of the leading truck navigation apps in the US... used by over a million truck drivers every month. Fleets like Costco, Builders FirstSource and Wilson Logistics use it too... and plenty of smaller carriers.\n\n" +
+      "(slow) Just so I don't waste your time... what part of the operation do you look after? Are you more on the owner side, running the fleet, safety, or dispatch?",
+    note: "If you know their freight, swap in a fleet like theirs: reefer → Schuster or Hurricane Express, lumber and building → YellaWood, small dry van → Arka Express. Then pick the role they actually do; the next card is written for that person.",
+    guard: "Only name fleets from the customer list in the Sales Knowledge Base. Don't say what they pay for or quote results.",
+    options: [
+      { label: "Owner / Founder", ack: "Oh nice, got it. Appreciate that.", next: "pitch", tone: "go", persona: "owner" },
+      { label: "Fleet manager / Ops", ack: "Got it, appreciate that.", next: "pitch", tone: "go", persona: "ops" },
+      { label: "Safety manager", ack: "Got it, appreciate that.", next: "pitch", tone: "go", persona: "safety" },
+      { label: "Dispatcher", ack: "Oh nice, got it. Appreciate that.", next: "pitch", tone: "go", persona: "dispatcher" },
+      { label: "Driver", next: "driver", tone: "warn", persona: "driver" },
+      { label: "Office contact / someone else", next: "gatekeeper", tone: "warn", persona: "gatekeeper" },
+      { label: "Just send me an email", next: "obj:send_email", tone: "warn" },
+      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
+    ],
+  },
+  pitch: {
+    title: "The pitch",
+    script:
+      "So... (slow) the reason I'm calling... most fleets I talk to have drivers routing on phone GPS. Apps built for cars... that don't know a loaded trailer from a sedan.\n\n" +
+      "You know... one low bridge or restricted road, and you're paying for a ticket, a detour, a missed delivery window. Sometimes worse.\n\n" +
+      "What we actually find... the problem isn't the drivers. (pause) It's that nobody gave them a route built for the truck.\n\n" +
+      "So that's what NavPro does... your dispatcher sends a truck-safe route, and the driver sees parking and weigh stations ahead.\n\n" +
+      "So that's really all I'm calling about. (slow) If there's one thing you could improve about how your drivers get their routes, what would it be?",
+    byPersona: {
+      owner:
+        "So... (slow) the reason I'm calling... most owners I talk to can't really see what's happening on the road day to day. Drivers are routing on phone GPS... apps built for cars, that don't know a loaded trailer from a sedan.\n\n" +
+        "You know... one wrong turn onto a restricted road, and you're the one paying for it. A ticket, a detour, a missed delivery window. Sometimes worse.\n\n" +
+        "What we actually find... the problem isn't the drivers. (pause) It's that nobody gave them a route built for the truck, and nobody in the office can see when they go off it.\n\n" +
+        "So that's what NavPro does... your dispatch sends a truck-safe route, and you can see the route you planned next to what actually got driven.\n\n" +
+        "So that's really all I'm calling about. (slow) If there's one thing you could improve about how your trucks run day to day, what would it be?",
+      ops:
+        "So... (slow) the reason I'm calling... most fleet managers I talk to plan a route one way... and it gets driven another. Then they're piecing it together after the fact.\n\n" +
+        "You know... extra miles nobody planned, a missed window, a truck on a road it shouldn't be on. And you only hear about it later.\n\n" +
+        "What we actually find... the problem isn't the drivers. (pause) It's that the route never lived in one place the office controls.\n\n" +
+        "So that's what NavPro does... dispatch sends a truck-safe route, and you get planned versus actual, so off-route miles show up in a report instead of a phone call.\n\n" +
+        "So that's really all I'm calling about. (slow) If there's one thing you could improve about how routes get planned and actually followed, what would it be?",
+      safety:
+        "So... (slow) the reason I'm calling... most safety managers I talk to have every truck's height and weight on file... but the driver's still routing on phone GPS. Apps built for cars, that don't know a loaded trailer from a sedan.\n\n" +
+        "You know... one low bridge or restricted road, and it's a ticket, a detour, an incident report. Sometimes worse.\n\n" +
+        "What we actually find... the problem isn't the drivers. (pause) It's that the truck's dimensions never make it into the route.\n\n" +
+        "So that's what NavPro does... you set up the truck profile once, height, weight, length, axles, and every route dispatch sends is built around it.\n\n" +
+        "So that's really all I'm calling about. (slow) If there's one thing you could improve about how your drivers' routes handle truck size and restrictions, what would it be?",
+      dispatcher:
+        "So... (slow) the reason I'm calling... most dispatchers I talk to spend half the day on the phone. An address changes, and it's a call, a text, another call... then chasing the driver for an ETA.\n\n" +
+        "You know... one missed message, and the driver's headed to the wrong place, or onto a road the truck shouldn't be on.\n\n" +
+        "What we actually find... the problem isn't the drivers. (pause) It's that the route only lives in a text thread.\n\n" +
+        "So that's what NavPro does... you send a truck-safe route straight to the driver from the office, and when something changes, you send the new one the same way.\n\n" +
+        "So that's really all I'm calling about. (slow) If there's one thing you could improve about how routes and changes get to your drivers, what would it be?",
+    },
+    note: "STOP after the question. Let them answer. Do not fill the silence.",
+    guard: "Never promise it prevents incidents or guarantees compliance. Describe what it does, not outcomes.",
+    options: [
+      { label: "Names something specific", ack: "That's a good one. Yeah, I hear that a lot.", next: "fleet", tone: "go", bant: { need: "yes" }, sop: { pain: "yes" }, sub: "Note their exact words. You'll play them back in the recap." },
+      { label: "Not sure / nothing specific", ack: "Fair enough, appreciate the honest answer.", next: "fleet", tone: "warn", sub: "Keep going. The next questions often bring it out." },
+      { label: "Honestly, it runs fine", ack: "That's great to hear.", next: "fleet", tone: "warn", sub: "Stay curious. If the next questions don't turn up anything, close politely." },
+      { label: "Truck GPS or another routing tool", next: "obj:have_provider", tone: "warn" },
+      { label: "Other priorities right now", next: "obj:priorities", tone: "warn" },
+      { label: "Just send me an email", next: "obj:send_email", tone: "warn" },
+      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
+    ],
+  },
+  fleet: {
+    title: "Fleet size and equipment",
+    script: "And how many trucks and drivers are you running right now, and what kind of equipment?",
+    note: "Note the equipment: flatbed, reefer, dry van, hazmat. It sets their truck profiles and their price tier.",
+    options: [
+      { label: "3–10 trucks", ack: "Okay, perfect.", next: "discovery", tone: "go", sop: { fleet: "yes" }, size: "3-10" },
+      { label: "11–50 trucks", ack: "Okay, perfect.", next: "discovery", tone: "go", sop: { fleet: "yes" }, size: "11-50" },
+      { label: "50+ trucks", ack: "Oh nice, that's a solid operation.", next: "discovery", tone: "go", sop: { fleet: "yes" }, size: "50+" },
+      { label: `Fewer than ${CAMPAIGN.minTrucks} trucks`, next: "end_out_of_campaign", tone: "stop", sop: { fleet: "no" } },
+      { label: "Rather not say", ack: "No worries at all.", next: "discovery", tone: "warn", sop: { fleet: "unknown" } },
+    ],
+  },
+  discovery: {
+    title: "Find their pain",
+    discovery: true,
+    script: "",
+    note: "Ask 2 or 3 that fit, one at a time. Mark only what they confirm. Get a number if you can, like \"$3K a month on tolls\". The next card builds your demo pitch from what you mark.",
+    guard: "Don't suggest a problem they didn't raise. If nothing comes up, close politely.",
+    options: [
+      { label: "They confirmed a pain", ack: "Really appreciate you walking me through that.", next: "decision", tone: "go", bant: { need: "yes" }, sop: { pain: "yes" } },
+      { label: "Nothing really came up", next: "polite_close", tone: "stop", bant: { need: "no" }, sop: { pain: "no" }, dq: "No Interest" },
+      { label: "We already use Samsara / Motive / an ELD", next: "obj:have_provider", tone: "warn" },
+    ],
+  },
+  decision: {
+    title: "Who decides",
+    script: "And if this looked like a fit, who else would need to weigh in?",
+    note: "Find out who decides and whether they'd join the demo.",
+    options: [
+      { label: "They make the decision", ack: "Perfect, thanks.", next: "timeline", tone: "go", bant: { authority: "yes" }, sop: { dm: "yes" } },
+      { label: "Someone else decides and can join", ack: "Got it, thanks.", next: "timeline", tone: "go", bant: { authority: "yes" }, sop: { dm: "yes" } },
+      { label: "Someone else decides, unsure they'll join", ack: "Got it, thanks for being upfront.", next: "timeline", tone: "warn", bant: { authority: "no" }, sop: { dm: "no" } },
+      { label: "I'd need to talk to the owner", next: "obj:need_owner", tone: "warn" },
+    ],
+  },
+  timeline: {
+    title: "Timing",
+    script: "And is fixing that something you're looking at in the next couple of months, or more down the road?",
+    note: "Note their real answer.",
+    guard: "If they aren't actively looking, don't push them into a date.",
+    options: [
+      { label: "Within 1–3 months", ack: "Makes sense.", next: "budget", tone: "go", bant: { timeline: "yes" }, sop: { timeline: "yes" } },
+      { label: "Later than 3 months", ack: "Makes sense, thanks.", next: "budget", tone: "warn", bant: { timeline: "no" }, sop: { timeline: "yes" } },
+      { label: "No timing, just looking", ack: "Totally fine.", next: "budget", tone: "warn", bant: { timeline: "no" }, sop: { timeline: "no" } },
+    ],
+  },
+  budget: {
+    title: "Budget",
+    script: "And if it solved that, is a monthly tool something you'd be open to, budget-wise?",
+    note: "If they ask for a number, use the \"How much is it?\" objection. It shows the starting price for their fleet size.",
+    options: [
+      { label: "Yes, open to it", ack: "Appreciate you being open about that.", next: "book", tone: "go", bant: { budget: "yes" }, sop: { budget: "yes" } },
+      { label: "Need to see the value first", ack: "Totally fair.", next: "book", tone: "warn", bant: { budget: "unknown" }, sop: { budget: "unknown" } },
+      { label: "How much is it?", next: "obj:price", tone: "warn" },
+      { label: "No budget at all", ack: "Appreciate you being straight with me.", next: "book", tone: "stop", bant: { budget: "no" }, sop: { budget: "no" } },
+    ],
+  },
+  book: {
+    title: "Your demo pitch",
+    build: () => valuePitch(),
+    note: "This is built from the pains you marked. Read it back in their words where you can, then offer two specific slots.",
+    gate: true,
+    options: [
+      { label: "Picks a slot", ack: "Perfect.", next: "confirm", tone: "go" },
+      { label: "Send me info first", next: "obj:send_email", tone: "warn" },
+      { label: "Need to check with the owner", next: "obj:need_owner", tone: "warn" },
+      { label: "Not now", next: "polite_close", tone: "stop", dq: "Bad Timing" },
+    ],
+  },
+  confirm: {
+    title: "Confirm the invite",
+    script: "I'll send the invite to [work email] for [day, time and time zone]. Should anyone else be on it, so the right people are in the room?",
+    note: "For the AE handoff, note: fleet size, truck types, their #1 pain in their own words (with a dollar amount if you got one), and their ELD/TMS.",
+    guard: "Don't call it booked until the event exists and the invite has gone to the prospect and the AE.",
+    options: [{ label: "Event created, invite sent", next: "end_booked", tone: "go" }],
+  },
+  /* ---------- Inbound lead: they came to us. Book the demo first, qualify after. ---------- */
+  in_opener: {
+    title: "Inbound opener",
+    script: "Hey [first name], it's [your name] from Trucker Path. You checked us out recently, and my account executive asked me to set up a quick demo with you... it's just about 5 to 10 minutes. Are you available for a quick demo now?",
+    note: "Call fast; inbound leads go cold within hours. Book first. The questions come after they say yes.",
+    options: [
+      { label: "Yes, now works", ack: "Awesome.", next: "in_why", tone: "go", demo: "now" },
+      { label: "Not right now", next: "in_later", tone: "warn" },
+      { label: "What's this about?", next: "in_book", tone: "warn" },
+      { label: "Doesn't remember signing up", next: "in_remind", tone: "warn" },
+      { label: "Send me info first", next: "obj:send_email", tone: "warn" },
+      { label: "Need to check with the owner", next: "obj:need_owner", tone: "warn" },
+      { label: "How much is it?", next: "obj:price", tone: "warn" },
+      { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
+      { label: "I'm a driver, just using the app", next: "in_driver_only", tone: "stop" },
+    ],
+  },
+  in_remind: {
+    title: "Remind them",
+    script: "No worries at all, you'd checked out Trucker Path recently, and my account executive asked me to set up a quick demo to show you the fleet side... it's just about 5 to 10 minutes. Are you available now?",
+    options: [
+      { label: "Yes, now works", ack: "Awesome.", next: "in_why", tone: "go", demo: "now" },
+      { label: "Not right now", next: "in_later", tone: "warn" },
+      { label: "What's this about?", next: "in_book", tone: "warn" },
+      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
+      { label: "I'm a driver, just using the app", next: "in_driver_only", tone: "stop" },
+    ],
+  },
+  in_book: {
+    title: "What's this about?",
+    build: () => inboundPitch(),
+    note: "Keep it short. The demo does the selling.",
+    options: [
+      { label: "Yes, now works", ack: "Awesome.", next: "in_why", tone: "go", demo: "now" },
+      { label: "Not right now", next: "in_later", tone: "warn" },
+      { label: "Send me info first", next: "obj:send_email", tone: "warn" },
+      { label: "Need to check with the owner", next: "obj:need_owner", tone: "warn" },
+      { label: "How much is it?", next: "obj:price", tone: "warn" },
+    ],
+  },
+  in_later: {
+    title: "Not right now",
+    script: "No problem at all. When works better for 5 to 10 minutes, later today or tomorrow? And what time zone are you in?",
+    note: "Get a specific time. Later today beats tomorrow.",
+    options: [
+      { label: "Agrees a time", ack: "Perfect, you're locked in.", next: "in_why", tone: "go", demo: "later" },
+      { label: "Send me info first", next: "obj:send_email", tone: "warn" },
+      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
+    ],
+  },
+  in_why: {
+    title: "What got them looking",
+    script: "So our specialist can tailor it to you... what got you looking at Trucker Path? Was it more truck-safe routing, fuel and tolls, keeping track of your drivers, parking, or IFTA?",
+    painPick: ["restricted", "fuel", "tolls", "tracking", "parking", "ifta", "insurance", "lastmile"],
+    note: "Tap every one they mention. They become the Pain Points, and the last card tells them what the demo will show for each.",
+    options: [
+      { label: "Done, they named one or more", ack: "Got it, that helps a lot.", next: "in_trucks", tone: "go", bant: { need: "yes" }, sop: { pain: "yes" } },
+      { label: "Just looking around", ack: "Totally fair.", next: "in_trucks", tone: "warn" },
+      { label: "I'm a driver, just using the app", next: "in_driver_only", tone: "stop" },
+    ],
+  },
+  in_trucks: {
+    title: "Number of trucks",
+    script: "And how many trucks are you running right now?",
+    options: [
+      { label: "1–2 trucks", ack: "Got it.", next: "in_role", tone: "warn", sop: { fleet: "no" }, size: "1-2", sub: "Under the 3-truck minimum. Keep the demo, but flag it to your manager." },
+      { label: "3–10 trucks", ack: "Okay, perfect.", next: "in_role", tone: "go", sop: { fleet: "yes" }, size: "3-10" },
+      { label: "11–50 trucks", ack: "Okay, perfect.", next: "in_role", tone: "go", sop: { fleet: "yes" }, size: "11-50" },
+      { label: "50+ trucks", ack: "Oh nice, that's a solid operation.", next: "in_role", tone: "go", sop: { fleet: "yes" }, size: "50+" },
+      { label: "Rather not say", ack: "No worries at all.", next: "in_role", tone: "warn", sop: { fleet: "unknown" } },
+    ],
+  },
+  in_role: {
+    title: "Position",
+    script: "And what's your role there? Are you more on the owner side, running the fleet, safety, or dispatch?",
+    options: [
+      { label: "Owner / Founder", ack: "Got it.", next: "in_details", tone: "go", persona: "owner", bant: { authority: "yes" }, sop: { dm: "yes" } },
+      { label: "Fleet manager / Ops", ack: "Got it.", next: "in_details", tone: "go", persona: "ops" },
+      { label: "Safety manager", ack: "Got it.", next: "in_details", tone: "go", persona: "safety" },
+      { label: "Dispatcher", ack: "Got it.", next: "in_details", tone: "go", persona: "dispatcher" },
+      { label: "Driver", ack: "Got it.", next: "in_details", tone: "warn", persona: "driver" },
+      { label: "Office / someone else", ack: "Got it.", next: "in_details", tone: "warn", persona: "gatekeeper" },
+    ],
+  },
+  in_details: {
+    title: "Demo details",
+    checklist: [
+      { key: "eld", label: "ELD Provider", q: "What ELD are you using right now?" },
+      { key: "tms", label: "TMS Provider", q: "And for loads and dispatch, are you on a TMS?" },
+      { key: "pain", label: "Pain Points", q: "What's the #1 thing you'd want the demo to show you?" },
+      { key: "contact", label: "Contact Person", q: "Is it just you joining, or should anyone else be on it? And what's the best email for the invite?" },
+      { key: "schedule", label: "Demo Schedule (US Time)", q: "And what time zone are you in, so I've got it right on the invite?" },
+    ],
+    script: "",
+    note: "Tap each one once you've asked it. Type their answers in Call notes, then Copy call summary: it comes out in the demo template format.",
+    guard: "Never confirm an ELD integration without checking the integration list.",
+    options: [
+      { label: "Got the details", ack: "Perfect.", next: "in_wrap", tone: "go" },
+    ],
+  },
+  in_wrap: {
+    title: "Wrap up",
+    build: () => demoPreview(),
+    warnings: false,
+    note: "Tell them what the demo will show, in their terms. Then hand off or send the invite.",
+    options: [
+      { label: "Handed to the AE / invite sent", ack: "Awesome.", next: "end_booked", tone: "go" },
+    ],
+  },
+  in_driver_only: {
+    title: "Driver using the app for themselves",
+    end: true,
+    script: "Got it, love that you're using it. The fleet side is really built for companies running trucks, so you're all set with the app. Thanks so much, [first name]!",
+    crm: { stage: "Disqualified", reason: "Not a Good Fit" },
+    note: "Not a fleet lead. Log it and move on.",
+  },
+  driver: {
+    title: "Driver on the line",
+    script: "Got it. What do you use for navigation on the road, and what's the hardest part of it? And who looks after truck routing for the fleet? Would you be okay pointing me to them?",
+    note: "Drivers often use the app, but aren't buyers. Ask for an introduction, no pressure.",
+    options: [
+      { label: "Gives a name or intro", next: "end_referral", tone: "go" },
+      { label: "Not comfortable sharing", next: "end_lost", tone: "stop", dq: "Not a decision maker" },
+    ],
+  },
+  gatekeeper: {
+    title: "Find the right person",
+    script: "Thanks. Who looks after truck routing or dispatch there, and what's the best way to reach them?",
+    note: "Be brief and respectful.",
+    options: [
+      { label: "Puts you through", next: "transferred", tone: "go" },
+      { label: "Gives a name or contact", next: "end_referral", tone: "go" },
+      { label: "\"May I know why you're calling?\"", next: "gatekeeper_why", tone: "warn" },
+      { label: "Takes a message", next: "end_message", tone: "warn" },
+      { label: "Won't share", next: "end_lost", tone: "stop", dq: "Not a decision maker" },
+    ],
+  },
+  gatekeeper_why: {
+    title: "Gatekeeper: why are you calling?",
+    script: "Yeah, of course. It's just [your name] over at Trucker Path. We've got a tool called NavPro that helps the office plan truck routes and send them out to the drivers. I just wanted a quick word with whoever looks after routing or dispatch to see if it's even relevant. Who would that be?",
+    note: "Short, honest and friendly. Give the real reason, then ask for the person. Don't pitch to the gatekeeper.",
+    guard: "Don't pretend you know the decision maker or that they're expecting your call.",
+    options: [
+      { label: "Puts you through", next: "transferred", tone: "go" },
+      { label: "Gives a name or contact", next: "end_referral", tone: "go" },
+      { label: "Takes a message", next: "end_message", tone: "warn" },
+      { label: "\"We're not interested\"", next: "obj:not_interested", tone: "warn" },
+      { label: "Won't share", next: "end_lost", tone: "stop", dq: "Not a decision maker" },
+    ],
+  },
+  transferred: {
+    title: "Put through to the right person",
+    script: "Hey [first name], thanks for picking up. It's just [your name] here over at Trucker Path. I know I'm catching you cold here, mind if I take just half a minute? Tell you why I called, then you can let me know if it's relevant or not?",
+    note: "Fresh start with the new person. Keep it light and wait for the yes.",
+    options: [
+      { label: "Sure, go ahead", ack: "Appreciate that, I'll be quick.", next: "reason", tone: "go" },
+      { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
+      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
+      { label: "How did you get my number?", next: "obj:how_number", tone: "warn" },
+    ],
+  },
+  polite_close: {
+    title: "Polite close",
+    script: "That's completely fair, thanks for being straight with me. Would it be okay if I checked back in a few months, or would you rather I didn't?",
+    note: "Respect the answer. Log the outcome accurately.",
+    options: [
+      { label: "Okay to check back", next: "end_nurture", tone: "go" },
+      { label: "Rather not", next: "end_lost", tone: "stop" },
+      { label: "Don't contact me again", next: "end_dnc", tone: "stop" },
+    ],
+  },
+  callback: {
+    title: "Set a callback",
+    script: "No problem. When's a good time to call back, and what time zone are you in?",
+    note: "A callback isn't a demo. Schedule it in the approved tool.",
+    options: [{ label: "Time agreed", next: "end_callback", tone: "go" }],
+  },
+
+  /* End cards. crm = what to set on the HubSpot lead. reason "auto" uses the
+     disqualification reason picked up from the answers during the call. */
+  end_booked: { title: "Demo booked", end: true, script: "I'm going to send the invite now. Kindly accept it when it comes through, so our account executive knows you'll be attending and can prepare the presentation for you. Thanks so much, [first name], have a good one!", crm: { stage: "Deal Created" }, note: "Create the deal, associate company and contact, invite the AE. You own it until the demo is attended." },
+  end_callback: { title: "Callback agreed", end: true, script: "Perfect, speak to you then. Thanks for your time.", crm: { stage: "Call Back" }, note: "Set the callback task with date, time and time zone. It isn't a booked demo." },
+  end_message: { title: "Message left with gatekeeper", end: true, script: "Thanks so much, I really appreciate it.", crm: { stage: "Attempting" }, note: "Log who you spoke to and the message. Call back and ask for the decision maker by name." },
+  end_referral: { title: "Referral", end: true, script: "Thanks so much, I really appreciate it.", crm: { stage: "Disqualified", reason: "Not a decision maker" }, note: "Create a lead for the person you were referred to and call them. A referral isn't a buying commitment." },
+  end_email: { title: "Email requested", end: true, script: "I'll send that over. Thanks for your time.", crm: { stage: "Short-term Nurture" }, note: "Not a demo booking and not marketing consent. Don't log it as sent until it's actually sent." },
+  end_nurture: { title: "Check back later", end: true, script: "Great, I'll check back then. Thanks for your time.", crm: { stage: "Long-term Nurture" }, note: "Set the follow-up task for when they said." },
+  end_lost: { title: "Not a fit right now", end: true, script: "No problem at all. Thanks for your time.", crm: { stage: "Disqualified", reason: "auto" }, note: "Pick the reason that matches what they actually said. Accurate reasons let us see which lead sources are working." },
+  end_existing: { title: "Existing customer", end: true, script: "Oh great, thanks for letting me know. I'll make sure the right person on our side has that.", crm: { stage: "Disqualified", reason: "Existing customer" }, note: "Check the account in HubSpot and flag it to their account owner if anything came up." },
+  end_out_of_campaign: { title: "Outside this campaign", end: true, script: "Thanks for that. I don't want to waste your time on something that isn't built for your setup.", crm: { stage: "Disqualified", reason: "Wrong fleet size" }, note: `Under the ${CAMPAIGN.minTrucks}-truck minimum for this campaign. Don't force a demo.` },
+  end_dnc: { title: "Do not contact", end: true, stop: true, script: "Understood. I'll make sure you're not contacted again. Sorry to have bothered you.", crm: { stage: "Disqualified", reason: "DO NOT CONTACT" }, note: "Stop outreach now. Fill in DNC Reason on the contact and suppress the number in Kixie." },
+};
+
+const objections = {
+  not_interested: {
+    title: "Not interested",
+    script: "Totally fair, most people I call say the same thing before they know why I'm calling. Can I ask just one thing: is that because the way you handle routing works well today, or it's just not a priority right now?",
+    note: "Ask once. If they decline, close politely.",
+    options: [
+      { label: "Opens up, back to the script", ack: "Appreciate you sharing that.", next: "resume", tone: "go" },
+      { label: "Not a priority", next: "polite_close", tone: "stop", dq: "Bad Timing" },
+      { label: "Declines to talk", next: "end_lost", tone: "stop", dq: "No Interest" },
+      { label: "Don't call me again", next: "end_dnc", tone: "stop" },
+    ],
+  },
+  priorities: {
+    title: "Other priorities right now",
+    script: "Totally fair, most people I call have a full plate. Is routing just further down the list for now, or is it something you'd want to look at later this year?",
+    options: [
+      { label: "Opens up, back to the script", ack: "Appreciate you sharing that.", next: "resume", tone: "go" },
+      { label: "Later this year", next: "callback", tone: "warn", bant: { timeline: "no" } },
+      { label: "Not at all", next: "polite_close", tone: "stop", dq: "No Interest" },
+    ],
+  },
+  send_email: {
+    title: "Just send me an email",
+    script: "Happy to. So I send something relevant, what's your biggest priority on routing right now? And what's the best work email, and is it okay if I follow up once you've had a look?",
+    guard: "An email request isn't a demo or marketing consent. Don't say it's sent unless it actually was.",
+    options: [
+      { label: "Open to a short call instead", ack: "Love that, appreciate it.", next: "book", tone: "go" },
+      { label: "Back to the script", ack: "Appreciate that.", next: "resume", tone: "go" },
+      { label: "Just the email", next: "end_email", tone: "warn" },
+    ],
+  },
+  have_provider: {
+    title: "We already use Samsara / Motive / an ELD",
+    script: "Makes sense, most fleets I call already have something. And honestly, this isn't a replacement... it connects with over 30 ELDs, like Samsara and Platform Science, and adds truck-safe routing, parking and fuel on top. What are you using, and what's still a pain with it?",
+    guard: "Don't knock the incumbent. Check the integration list before confirming their exact ELD works.",
+    options: [
+      { label: "Names a gap, back to the script", ack: "That's really helpful, thanks.", next: "resume", tone: "go" },
+      { label: "Already a Trucker Path / NavPro customer", next: "end_existing", tone: "warn" },
+      { label: "Happy with what they have", next: "obj:happy_1", tone: "warn" },
+    ],
+  },
+  happy_1: {
+    title: "Happy with what they have",
+    hidden: true,
+    script: "That's great to hear, honestly... most of the fleets we work with like their ELD too. The ELD side is usually about hours and logs. What we add is the routing side: truck-safe routes, parking and fuel for your drivers. Out of curiosity, where do your drivers get their routes from today?",
+    note: "Rebuttal 1 of 2. Get curious about the routing gap, not the ELD.",
+    guard: "Don't knock their ELD or claim what it can't do.",
+    options: [
+      { label: "Phone GPS / car apps / drivers figure it out", ack: "Yeah, that's exactly the gap we fill.", next: "resume", tone: "go" },
+      { label: "Opens up about another pain", ack: "That's really helpful, thanks.", next: "resume", tone: "go" },
+      { label: "Still happy, no need", next: "obj:happy_2", tone: "warn" },
+    ],
+  },
+  happy_2: {
+    title: "Still happy",
+    hidden: true,
+    script: "Totally fair, and I'm not asking you to switch anything. Since it sits on top of what you've already got, would you be open to a quick look? It's just {demo}, and worst case you walk away with a couple of ideas for your drivers.",
+    note: "Rebuttal 2 of 2. Make the ask small. If it's still a no, respect it.",
+    options: [
+      { label: "Okay, a quick look", ack: "Awesome, appreciate that.", next: "book", tone: "go" },
+      { label: "Still a no", next: "polite_close", tone: "stop", dq: "Competitor Preference" },
+    ],
+  },
+  setup: {
+    title: "Sounds like a lot to set up",
+    script: "Totally fair, nobody wants another project. It takes about two minutes to get started, there's a spreadsheet template for your trucks, and our onboarding team sets up the truck profiles with you. Would it help to see that on a quick demo?",
+    note: "\"Two minutes\" is Trucker Path's own marketing number. Present it that way if they push.",
+    options: [
+      { label: "Opens up, back to the script", ack: "Appreciate you sharing that.", next: "resume", tone: "go" },
+      { label: "Open to a demo", ack: "Perfect.", next: "book", tone: "go" },
+      { label: "Still no time for it", next: "polite_close", tone: "stop", dq: "Bad Timing" },
+    ],
+  },
+  adoption: {
+    title: "Drivers won't use another app",
+    script: "Totally fair, drivers hate new apps. This one's built for them... it works on Apple CarPlay, has offline maps, a Spanish version and night mode. And a lot of drivers already use Trucker Path for parking. Would it help if the demo showed exactly what the driver sees?",
+    options: [
+      { label: "Opens up, back to the script", ack: "Appreciate you sharing that.", next: "resume", tone: "go" },
+      { label: "Open to a demo", ack: "Perfect.", next: "book", tone: "go" },
+      { label: "Still a no", next: "polite_close", tone: "stop", dq: "Not a Good Fit" },
+    ],
+  },
+  price: {
+    title: "How much is it?",
+    script: "Fair question. For a fleet your size it starts from about {price}, no setup fee, and you can cancel anytime. The exact number depends on the package, and our specialist confirms it on the demo. Honestly, most fleets compare it with one ticket or one month of tolls.",
+    guard: "These are starting list prices. Fuel plans, IFTA and driver analytics are Business tier and cost more. The AE confirms the quote.",
+    options: [
+      { label: "That's reasonable", ack: "Glad that helps.", next: "book", tone: "go", bant: { budget: "yes" }, sop: { budget: "yes" } },
+      { label: "Need to see the value first", ack: "Totally fair.", next: "book", tone: "go", bant: { budget: "unknown" }, sop: { budget: "unknown" } },
+      { label: "Timing's off", next: "timeline", tone: "warn" },
+      { label: "No ability to spend", next: "polite_close", tone: "stop", bant: { budget: "no" }, sop: { budget: "no" }, dq: "Budget Constraints" },
+    ],
+  },
+  too_busy: {
+    title: "Too busy",
+    script: "Totally fair. Should I call back at a specific time, or would you rather I leave it?",
+    options: [
+      { label: "Call back later", next: "callback", tone: "go" },
+      { label: "Gives you 30 seconds now", ack: "Appreciate it, I'll be quick.", next: "resume", tone: "go" },
+      { label: "Leave it", next: "end_lost", tone: "stop", dq: "No Interest" },
+    ],
+  },
+  how_number: {
+    title: "How did you get my number?",
+    script: "Fair question. I don't want to guess, so I'll check our records and let you know. And if you'd rather I didn't call again, just say and I'll make sure of it.",
+    note: "If you have a verified source, say it. Otherwise don't guess.",
+    options: [
+      { label: "Okay, go on", ack: "Thanks, appreciate that.", next: "resume", tone: "go" },
+      { label: "Stop contacting me", next: "end_dnc", tone: "stop" },
+    ],
+  },
+  drivers_gps: {
+    title: "Drivers use phones / GPS",
+    script: "Makes sense, a lot of fleets I call start there. Does the office set up truck profiles and send routes to drivers, or does each driver pick their own route?",
+    guard: "Talk about their workflow, not replacing devices. No competitor claims.",
+    options: [
+      { label: "Office manages routes", ack: "Got it, thanks.", next: "resume", tone: "go" },
+      { label: "Drivers choose, open to talking", ack: "Got it, appreciate that.", next: "resume", tone: "go" },
+      { label: "No interest", next: "polite_close", tone: "stop", dq: "No Interest" },
+    ],
+  },
+  need_owner: {
+    title: "Need to talk to the owner",
+    script: "Of course. Who else is involved, and what do they sign off on? Could they join a short follow-up with us?",
+    note: "A referral isn't a buying commitment.",
+    options: [
+      { label: "Decision maker can join", ack: "Perfect, appreciate that.", next: "book", tone: "go", bant: { authority: "yes" }, sop: { dm: "yes" } },
+      { label: "Intro or callback only", next: "callback", tone: "warn" },
+      { label: "No", next: "polite_close", tone: "stop", dq: "No Decision-making Power" },
+    ],
+  },
+  dnc: {
+    title: "Stop calling me",
+    dnc: true,
+    script: "Understood. I'll make sure you're not contacted again. Sorry to have bothered you.",
+    guard: "Honor it immediately. Apply suppression in the CRM and dialer.",
+    options: [{ label: "End call", next: "end_dnc", tone: "stop" }],
+  },
+};
+
+const BANT_ITEMS = [["budget", "Budget"], ["authority", "Authority"], ["need", "Need"], ["timeline", "Timeline"]];
+const SOP_ITEMS = [["fleet", `Fleet ${CAMPAIGN.minTrucks}+ trucks`], ["dm", "Decision maker on call or at demo"], ["pain", "Clear pain or interest"], ["timeline", "Buying timeline"], ["budget", "Budget / seats"]];
+/* ======================== end of script data ======================== */
+
+const $ = (id) => document.getElementById(id);
+let state, history, timerStart = null, timerId = null;
+
+function freshState(mode = "outbound") {
+  return {
+    mode, asked: [], cardId: MODES[mode].main[0], objectionId: null, variant: {}, log: [], persona: null, dq: null, ack: null, size: null, pains: [],
+    bant: { budget: "unknown", authority: "unknown", need: "unknown", timeline: "unknown" },
+    sop: { fleet: "unknown", dm: "unknown", pain: "unknown", timeline: "unknown", budget: "unknown" },
+  };
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function fill(text) {
+  return esc(text.replace(/\{(\w+)\}/g, (_, k) => k === "demo" ? (state.mode === "inbound" ? "5 to 10 minutes" : "30 minutes") : k === "price" ? PRICES[state.size] || "[their starting price; our team quotes 50+ trucks]" : `[${PLACEHOLDERS[k] || k}]`))
+    .replace(/\[([^\]]+)\]/g, '<span class="fillin">[$1]</span>')
+    .replace(/ ?\(([a-z][a-z ]{0,18})\) ?/g, " ");
+}
+
+function titleFor(next) {
+  if (next === "resume") return "Back to " + flow[state.cardId].title.toLowerCase();
+  if (next.startsWith("obj:")) return "Objection: " + objections[next.slice(4)].title;
+  return flow[next] ? flow[next].title : next;
+}
+
+function currentCard() { return state.objectionId ? objections[state.objectionId] : flow[state.cardId]; }
+
+/* ---------- navigation ---------- */
+function snapshot() { history.push(JSON.parse(JSON.stringify(state))); }
+
+function painOrder() { return PAIN_ORDER[state.persona] || PAIN_ORDER.default; }
+function chosenPains() { return state.pains.filter((k) => PAINS[k]); }
+
+function valuePitch() {
+  const lines = chosenPains().slice(0, 3).map((k) => PAINS[k].pitch);
+  if (lines.length) lines[0] = lines[0].replace(/^And (\w)/, (_, c) => c.toUpperCase());
+  const body = lines.length
+    ? lines.join("\n\n")
+    : "From what you've shared, the big win is getting your drivers on routes built for the truck, and seeing where everyone is without picking up the phone.";
+  return "So based on what you told me...\n\n" + body +
+    "\n\nHonestly, the easiest way to see it is a free 30-minute demo with one of our specialists, using your own trucks and routes. Would [day] at [time] or [day] at [time] work better, and what time zone are you in?";
+}
+
+function inboundPitch() {
+  const lines = chosenPains().slice(0, 2).map((k) => PAINS[k].pitch);
+  if (lines.length) lines[0] = lines[0].replace(/^And (\w)/, (_, c) => c.toUpperCase());
+  return (lines.length ? lines.join("\n\n") + "\n\n" : "Totally. Quick version... it's the fleet side of Trucker Path. Your dispatch sends truck-safe routes straight to the drivers, with parking, fuel and live tracking in one place.\n\n") +
+    "Honestly, the easiest way to see what it'd do for your fleet is a quick demo, just 5 to 10 minutes. Are you available for one now?";
+}
+
+function demoPreview() {
+  const lines = chosenPains().slice(0, 3).map((k) => DEMO_LINES[k]).filter(Boolean);
+  const list = lines.length < 2 ? lines.join("") : lines.slice(0, -1).join(", ") + (lines.length > 2 ? "," : "") + " and " + lines[lines.length - 1];
+  return "You're all set. So on the demo, our account executive will walk you through exactly how it'd look for your fleet" +
+    (list ? "... " + list + "." : ", using your own trucks and routes.") +
+    "\n\nAnything else you'd want them to cover?";
+}
+
+function pitchWarnings() {
+  const chosen = chosenPains().slice(0, 3);
+  const w = [];
+  if (state.size === "3-10" && chosen.some((k) => PAINS[k].business)) w.push("Fuel plans, IFTA and driver analytics are Business tier. Don't pitch them as included at the $79 starting price.");
+  if (chosen.includes("tolls")) w.push("The Keller toll numbers are one customer's claim. Say it that way.");
+  if (chosen.includes("eld")) w.push("Check the integration list before confirming their exact ELD.");
+  return w.join(" ");
+}
+
+function crmText(card) {
+  const c = card.crm;
+  const reason = c.reason === "auto" ? state.dq || "No Interest" : c.reason;
+  return `Lead stage: ${c.stage}` + (reason ? `. Disqualification reason: ${reason}` : "") + ".";
+}
+
+function applyMarks(o) {
+  if (o.persona) state.persona = o.persona;
+  if (o.dq) state.dq = o.dq;
+  if (o.size) state.size = o.size;
+  if (o.demo) state.demo = o.demo;
+  (o.pains || []).forEach((p) => { if (!state.pains.includes(p)) state.pains.push(p); });
+  Object.assign(state.bant, o.bant || {});
+  Object.assign(state.sop, o.sop || {});
+}
+
+function go(o) {
+  startTimer();
+  snapshot();
+  state.log.push({ card: currentCard().title, choice: o.label });
+  applyMarks(o);
+  state.ack = o.ack || null;
+  const next = state.mode === "inbound" && o.next === "book" ? "in_book" : o.next;
+  if (next === "resume") state.objectionId = null;
+  else if (next.startsWith("obj:")) state.objectionId = next.slice(4);
+  else { state.cardId = next; state.objectionId = null; }
+  render();
+}
+
+function openObjection(id) {
+  if (state.objectionId === id) return;
+  startTimer();
+  snapshot();
+  state.log.push({ card: flow[state.cardId].title, choice: "Objection: " + objections[id].title });
+  state.objectionId = id;
+  state.ack = null;
+  render();
+}
+
+function back() {
+  if (!history.length) return;
+  state = history.pop();
+  render();
+}
+
+/* ---------- card ---------- */
+function marksText(o) {
+  const parts = [];
+  const add = (label, v) => parts.push(v === "yes" ? `${label} ✓` : v === "no" ? `<span class="neg">${label} ✗</span>` : `${label} ?`);
+  for (const [k, v] of Object.entries(o.bant || {})) add(BANT_ITEMS.find((b) => b[0] === k)[1], v);
+  for (const [k, v] of Object.entries(o.sop || {})) {
+    if (o.bant && k in o.bant && v === o.bant[k]) continue;
+    add(SOP_ITEMS.find((s) => s[0] === k)[1].replace(/ on call.*| \/ seats| or interest/, ""), v);
+  }
+  return parts.join(" · ");
+}
+
+function gateNote() {
+  const yes = BANT_ITEMS.filter(([k]) => state.bant[k] === "yes").length;
+  const missing = SOP_ITEMS.filter(([k]) => state.sop[k] !== "yes").map(([, l]) => l);
+  if (yes >= 3 && !missing.length) {
+    return `<div class="note gate ok"><b>Check</b><span>BANT ${yes} of 4 and booking checklist complete. Still confirm campaign fit and current booking rules.</span></div>`;
+  }
+  const bits = [];
+  if (yes < 3) bits.push(`BANT screen is ${yes} of 4 (3 is the screening signal).`);
+  if (missing.length) bits.push(`Not confirmed yet: ${missing.join(", ")}.`);
+  return `<div class="note gate"><b>Before booking</b><span>${esc(bits.join(" "))} Resolve these rather than assuming them.</span></div>`;
+}
+
+function render() {
+  const card = currentCard();
+  const el = $("card");
+  const isObj = !!state.objectionId;
+  el.className = "panel card" + (isObj ? " objection" : "") + (card.end ? " end" : "") + (card.stop ? " stopcard" : "");
+
+  const main = MODES[state.mode].main;
+  const idx = main.indexOf(state.cardId);
+  let head;
+  if (isObj) head = `<span class="chip obj">Objection</span><span class="step">during ${esc(flow[state.cardId].title)}</span>`;
+  else if (card.end) head = card.stop ? `<span class="chip stopped">Call ended</span>` : `<span class="chip done">Call ended</span>`;
+  else if (idx >= 0) head = `<span class="step">Step ${idx + 1} of ${main.length}</span><span class="progress" aria-hidden="true">${main.map((_, i) => `<span class="${i <= idx ? "on" : ""}"></span>`).join("")}</span>`;
+  else head = `<span class="chip branch">Branch</span>`;
+
+  const key = isObj ? "obj:" + state.objectionId : state.cardId;
+  const vIdx = state.variant[key] || 0;
+  const tailored = card.byPersona && state.persona && card.byPersona[state.persona];
+  if (tailored) head += `<span class="chip persona">Tailored: ${esc(PERSONAS[state.persona].label)}</span>`;
+  const script = card.build ? card.build() : tailored ? tailored : card.variants ? card.variants[vIdx].script : card.script;
+  const guard = [card.guard, card.build && card.warnings !== false ? pitchWarnings() : ""].filter(Boolean).join(" ");
+  const painList = card.discovery || card.painPick
+    ? `<div class="pains">${(card.painPick || painOrder()).map((k) => {
+        const on = state.pains.includes(k);
+        return `<button class="pain" type="button" aria-pressed="${on}" data-pain="${k}"><span class="pq">${esc(card.painPick ? PAINS[k].label : PAINS[k].q)}</span><span class="pl">${on ? "Mentioned" : card.painPick ? "" : esc(PAINS[k].label)}</span></button>`;
+      }).join("")}</div>`
+    : "";
+  const checklist = card.checklist
+    ? `<div class="pains">${card.checklist.map((c) => {
+        const on = state.asked.includes(c.key);
+        return `<button class="pain" type="button" aria-pressed="${on}" data-ask="${c.key}"><span class="pq">${fill(c.q)}</span><span class="pl">${on ? "✓ " : ""}${esc(c.label)}</span></button>`;
+      }).join("")}</div>`
+    : "";
+  const tabs = card.variants
+    ? `<div class="tabs" role="tablist">${card.variants.map((v, i) => `<button class="tab" role="tab" type="button" aria-selected="${i === vIdx}" data-variant="${i}">${esc(v.label)}</button>`).join("")}</div>`
+    : "";
+
+  const opts = card.end ? [{ label: "Start a new call", next: "__new", tone: "go" }] : card.options;
+  const optHtml = opts.map((o, i) => {
+    const marks = marksText(o);
+    return `
+    <button class="opt ${o.tone || ""}" type="button" data-i="${i}">
+      <span class="key">${i + 1}</span>
+      <span><span class="lbl">${esc(o.label)}</span>${o.sub ? `<br><span class="sub">${esc(o.sub)}</span>` : ""}${marks ? `<br><span class="marks">${marks}</span>` : ""}</span>
+      <span class="dest">${o.next === "__new" ? "" : "→ " + esc(titleFor(o.next))}</span>
+    </button>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="card-head">${head}</div>
+    <h1>${esc(card.title)}</h1>
+    ${tabs}
+    ${script ? `<p class="script">${state.ack ? `<span class="ack" title="Acknowledge their answer first">${fill(state.ack)}</span> ` : ""}${fill(script)}</p>` : ""}
+    ${isObj ? `<div class="note gate"><b>Rule</b><span>${esc(OBJECTION_RULE)}</span></div>` : ""}
+    ${card.crm ? `<div class="note gate ok"><b>HubSpot</b><span>${esc(crmText(card))}</span></div>` : ""}
+    ${card.note ? `<div class="note"><b>${card.end ? "Next" : "Coach"}</b><span>${esc(card.note)}</span></div>` : ""}
+    ${painList}
+    ${checklist}
+    ${guard ? `<div class="note guard"><b>Don't</b><span>${esc(guard)}</span></div>` : ""}
+    ${card.gate ? gateNote() : ""}
+    <div class="options">${optHtml}</div>
+    <div class="card-foot">
+      <button class="btn" type="button" id="backBtn" ${history.length ? "" : "disabled"}>← Back</button>
+      <span class="hint"><kbd>1</kbd>–<kbd>9</kbd> pick an answer · <kbd>Backspace</kbd> back${isObj ? " · <kbd>Esc</kbd> back to script" : ""}</span>
+    </div>`;
+
+  el.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => { state.variant[key] = +t.dataset.variant; render(); }));
+  el.querySelectorAll("[data-ask]").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.ask;
+    state.asked = state.asked.includes(k) ? state.asked.filter((p) => p !== k) : [...state.asked, k];
+    render();
+  }));
+  el.querySelectorAll("[data-pain]").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.pain;
+    state.pains = state.pains.includes(k) ? state.pains.filter((p) => p !== k) : [...state.pains, k];
+    render();
+  }));
+  el.querySelectorAll(".opt").forEach((b) => b.addEventListener("click", () => {
+    const o = opts[+b.dataset.i];
+    if (o.next === "__new") newCall(); else go(o);
+  }));
+  $("backBtn").addEventListener("click", back);
+
+  $("objList").querySelectorAll(".obj-btn").forEach((b) => b.setAttribute("aria-current", String(b.dataset.id === state.objectionId)));
+  renderQuals();
+  renderPersona();
+  renderLog();
+}
+
+/* ---------- side panels ---------- */
+const STATE_LABEL = { unknown: "Unknown", yes: "Yes", no: "No" };
+const CYCLE = { unknown: "yes", yes: "no", no: "unknown" };
+
+function renderQuals() {
+  const group = (title, items, obj, name, foot) => {
+    const yes = items.filter(([k]) => obj[k] === "yes").length;
+    return `<div class="qual-group"><h3>${title}<span>${yes} of ${items.length}</span></h3>${items.map(([k, l]) =>
+      `<button class="qrow" type="button" data-group="${name}" data-k="${k}"><span>${esc(l)}</span><span class="state ${obj[k]}">${STATE_LABEL[obj[k]]}</span></button>`).join("")}<p class="small">${foot}</p></div>`;
+  };
+  $("quals").innerHTML =
+    group("BANT screen", BANT_ITEMS, state.bant, "bant", "3 of 4 is a screening signal only, not approval or fit.") +
+    group("Demo booking checklist", SOP_ITEMS, state.sop, "sop", "Leave unknowns unknown. Resolve them, don't assume.");
+  $("quals").querySelectorAll(".qrow").forEach((b) => b.addEventListener("click", () => {
+    const g = state[b.dataset.group];
+    g[b.dataset.k] = CYCLE[g[b.dataset.k]];
+    render();
+  }));
+}
+
+function renderPersona() {
+  const p = state.persona && PERSONAS[state.persona];
+  $("personaBox").hidden = !p;
+  if (!p) return;
+  $("personaBody").innerHTML = `
+    <h3>${esc(p.label)}</h3>
+    <dl>
+      <div><dt>Usually cares about</dt><dd>${esc(p.concerns)}</dd></div>
+      <div><dt>Explore</dt><dd>${esc(p.explore)}</dd></div>
+      <div><dt>Angle, only if they confirm it</dt><dd>${esc(p.angle)}</dd></div>
+      <div><dt>Careful</dt><dd>${esc(p.guard)}</dd></div>
+    </dl>`;
+}
+
+function renderLog() {
+  const log = $("log");
+  if (!state.log.length) { log.innerHTML = `<li><span></span><span class="c">Your path through the call shows here.</span></li>`; return; }
+  log.innerHTML = state.log.map((e, i) =>
+    `<li><span class="n">${i + 1}</span><span><span class="c">${esc(e.card)}:</span> ${esc(e.choice)}</span></li>`).join("");
+  log.scrollTop = log.scrollHeight;
+}
+
+function buildStatic() {
+  $("campaign").textContent = CAMPAIGN.name;
+  $("draftPill").hidden = !DRAFT;
+  $("neverList").innerHTML = NEVER_PROMISE.map((n) => `<li>${esc(n)}</li>`).join("");
+  $("objList").innerHTML = Object.entries(objections).filter(([, o]) => !o.hidden).map(([id, o]) =>
+    `<button class="obj-btn${o.dnc ? " dnc" : ""}" type="button" data-id="${id}">${esc(o.title)}</button>`).join("");
+  $("objList").querySelectorAll(".obj-btn").forEach((b) => b.addEventListener("click", () => openObjection(b.dataset.id)));
+}
+
+/* ---------- timer ---------- */
+function startTimer() {
+  if (timerStart) return;
+  timerStart = Date.now();
+  $("timer").classList.add("live");
+  timerId = setInterval(tick, 1000);
+}
+function tick() {
+  const s = Math.floor((Date.now() - timerStart) / 1000);
+  $("timer").textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+}
+
+/* ---------- new call ---------- */
+let modePending = null;
+function renderModes() {
+  $("campaign").hidden = state.mode !== "outbound";
+  $("modes").innerHTML = Object.entries(MODES).map(([id, m]) =>
+    `<button class="mode" type="button" data-mode="${id}" aria-pressed="${id === state.mode}">${esc(m.label)}</button>`).join("");
+  $("modes").querySelectorAll(".mode").forEach((b) => b.addEventListener("click", () => {
+    const mode = b.dataset.mode;
+    if (mode === state.mode) return;
+    if (!history.length || modePending === mode) { modePending = null; newCall(mode); return; }
+    modePending = mode;
+    b.textContent = "Click again to switch";
+    setTimeout(() => { if (modePending === mode) { modePending = null; renderModes(); } }, 3000);
+  }));
+}
+let confirmPending = null;
+function newCall(mode = state.mode) {
+  state = freshState(mode); history = [];
+  renderModes();
+  clearInterval(timerId); timerStart = null; timerId = null;
+  $("timer").textContent = "00:00"; $("timer").classList.remove("live");
+  $("notes").value = ""; $("copyStatus").textContent = ""; $("copyFallback").hidden = true;
+  render();
+}
+$("newCall").addEventListener("click", () => {
+  const btn = $("newCall");
+  const reset = () => { confirmPending = null; btn.textContent = "New call"; btn.classList.remove("danger"); };
+  if (confirmPending) { clearTimeout(confirmPending); reset(); newCall(); return; }
+  btn.textContent = "Click again to clear"; btn.classList.add("danger");
+  confirmPending = setTimeout(reset, 3000);
+});
+
+/* ---------- summary ---------- */
+function summary() {
+  const card = currentCard();
+  const bantYes = BANT_ITEMS.filter(([k]) => state.bant[k] === "yes").length;
+  const template = state.mode === "inbound" ? [
+    "DEMO DETAILS",
+    "ELD Provider: ",
+    "TMS Provider: ",
+    "Number of Trucks: " + (SIZE_LABEL[state.size] || ""),
+    "Pain Points: " + chosenPains().map((k) => PAINS[k].label).join(", "),
+    "Contact Person: ",
+    "Position: " + (state.persona ? PERSONAS[state.persona].label : ""),
+    "Demo Schedule (US Time): " + (state.demo === "now" ? "Now (live demo)" : ""),
+    "",
+  ] : [];
+  const lines = [
+    ...template,
+    "CALL SUMMARY (rep-entered, not a transcript)",
+    "Call type: " + MODES[state.mode].label + (state.mode === "outbound" ? " (" + CAMPAIGN.name + ")" : ""),
+    "Outcome: " + (card.end ? card.title : "In progress (" + card.title + ")"),
+    card.crm ? "HubSpot: " + crmText(card) : null,
+    timerStart ? "Duration: " + $("timer").textContent : null,
+    "",
+    "Contact role: " + (state.persona ? PERSONAS[state.persona].label : "unknown"),
+    "Fleet size: " + (SIZE_LABEL[state.size] || "unknown"),
+    "Pains confirmed: " + (chosenPains().map((k) => PAINS[k].label).join(", ") || "none marked"),
+    `BANT screen: ${bantYes} of 4 (` + BANT_ITEMS.map(([k, l]) => `${l} ${STATE_LABEL[state.bant[k]].toLowerCase()}`).join(", ") + ")",
+    "Booking checklist: " + SOP_ITEMS.map(([k, l]) => `${l}: ${STATE_LABEL[state.sop[k]].toLowerCase()}`).join("; "),
+    "",
+    "Path:",
+    ...state.log.map((e, i) => `${i + 1}. ${e.card}: ${e.choice}`),
+  ].filter((l) => l !== null);
+  const notes = $("notes").value.trim();
+  if (notes) lines.push("", "Notes:", notes);
+  return lines.join("\n");
+}
+$("copyBtn").addEventListener("click", async () => {
+  const text = summary();
+  try {
+    await navigator.clipboard.writeText(text);
+    $("copyStatus").textContent = "Copied. Paste it into the CRM.";
+    $("copyFallback").hidden = true;
+  } catch {
+    const fb = $("copyFallback");
+    fb.value = text; fb.hidden = false; fb.focus(); fb.select();
+    $("copyStatus").textContent = "Press Cmd+C (or Ctrl+C) to copy.";
+  }
+});
+
+/* ---------- keyboard ---------- */
+document.addEventListener("keydown", (e) => {
+  if (e.target.matches("input, textarea") || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (/^[1-9]$/.test(e.key)) {
+    const b = $("card").querySelectorAll(".opt")[+e.key - 1];
+    if (b) { e.preventDefault(); b.click(); }
+  } else if (e.key === "Backspace") {
+    e.preventDefault(); back();
+  } else if (e.key === "Escape" && state.objectionId) {
+    go({ label: "Back to script", next: "resume" });
+  }
+});
+
+/* ---------- boot ---------- */
+state = freshState(); history = [];
+buildStatic();
+renderModes();
+render();
+</script>
+</body>
+</html>
