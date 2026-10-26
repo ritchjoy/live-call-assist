@@ -77,8 +77,8 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 .brand { display: flex; align-items: baseline; gap: 10px; font-weight: 700; font-size: 1.15rem; letter-spacing: -0.01em; }
 .brand small { font-weight: 500; font-size: .95rem; color: #9FD8F7; }
-.modes { display: flex; border-radius: 999px; padding: 3px; gap: 3px; background: rgba(255, 255, 255, .1); }
-.mode { border: 0; background: transparent; border-radius: 999px; padding: 6px 16px; cursor: pointer; font-weight: 600; font-size: .88rem; color: #C9D3DC; }
+.modes { display: flex; border-radius: 999px; padding: 4px; gap: 4px; background: rgba(255, 255, 255, .1); }
+.mode { border: 0; background: transparent; border-radius: 999px; padding: 10px 28px; cursor: pointer; font-weight: 700; font-size: 1.2rem; color: #C9D3DC; }
 .mode:hover { color: #FFFFFF; }
 .mode[aria-pressed="true"] { background: var(--accent); color: #FFFFFF; }
 .campaign { font-size: .85rem; color: #C9D3DC; }
@@ -86,7 +86,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .top-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .timer { font-weight: 600; font-size: 1.05rem; font-variant-numeric: tabular-nums; color: #C9D3DC; }
 .timer.live { color: #7FD1FA; }
-.top .btn { background: transparent; color: #FFFFFF; border-color: rgba(255, 255, 255, .35); box-shadow: none; }
+.top .btn { font-size: 1.05rem; padding: 10px 24px; background: transparent; color: #FFFFFF; border-color: rgba(255, 255, 255, .35); box-shadow: none; }
 .top .btn:hover:not(:disabled) { background: rgba(255, 255, 255, .1); border-color: #FFFFFF; }
 .top .btn.danger { background: var(--stop); border-color: var(--stop); }
 
@@ -249,10 +249,7 @@ details.never ul { margin: 8px 0 0; padding-left: 1.1em; font-size: .88rem; disp
 <body>
 
 <header class="top">
-  <span class="brand">Trucker Path <small>Live Call Assist</small></span>
   <div class="modes" id="modes" role="group" aria-label="Call type"></div>
-  <span class="campaign" id="campaign"></span>
-  <span class="draft-pill" id="draftPill">Draft. Verify with a sales lead before live calls.</span>
   <div class="top-right">
     <span class="timer" id="timer" title="Call timer">00:00</span>
     <button class="btn" id="newCall" type="button">New call</button>
@@ -1212,8 +1209,6 @@ function renderLog() {
 }
 
 function buildStatic() {
-  $("campaign").textContent = CAMPAIGN.name;
-  $("draftPill").hidden = !DRAFT;
   $("neverList").innerHTML = NEVER_PROMISE.map((n) => `<li>${esc(n)}</li>`).join("");
   $("objList").innerHTML = Object.entries(objections).filter(([, o]) => !o.hidden).map(([id, o]) =>
     `<button class="obj-btn${o.dnc ? " dnc" : ""}" type="button" data-id="${id}">${esc(o.title)}</button>`).join("");
@@ -1233,21 +1228,15 @@ function tick() {
 }
 
 /* ---------- new call ---------- */
-let modePending = null;
 function renderModes() {
-  $("campaign").hidden = state.mode !== "outbound";
   $("modes").innerHTML = Object.entries(MODES).map(([id, m]) =>
     `<button class="mode" type="button" data-mode="${id}" aria-pressed="${id === state.mode}">${esc(m.label)}</button>`).join("");
   $("modes").querySelectorAll(".mode").forEach((b) => b.addEventListener("click", () => {
     const mode = b.dataset.mode;
     if (mode === state.mode) return;
-    if (!history.length || modePending === mode) { modePending = null; newCall(mode); return; }
-    modePending = mode;
-    b.textContent = "Click again to switch";
-    setTimeout(() => { if (modePending === mode) { modePending = null; renderModes(); } }, 3000);
+    newCall(mode);
   }));
 }
-let confirmPending = null;
 function newCall(mode = state.mode) {
   state = freshState(mode); history = [];
   renderModes();
@@ -1256,13 +1245,7 @@ function newCall(mode = state.mode) {
   $("notes").value = ""; $("copyStatus").textContent = ""; $("copyFallback").hidden = true;
   render();
 }
-$("newCall").addEventListener("click", () => {
-  const btn = $("newCall");
-  const reset = () => { confirmPending = null; btn.textContent = "New call"; btn.classList.remove("danger"); };
-  if (confirmPending) { clearTimeout(confirmPending); reset(); newCall(); return; }
-  btn.textContent = "Click again to clear"; btn.classList.add("danger");
-  confirmPending = setTimeout(reset, 3000);
-});
+$("newCall").addEventListener("click", () => newCall());
 
 /* ---------- summary ---------- */
 function summary() {
