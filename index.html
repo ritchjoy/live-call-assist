@@ -445,7 +445,7 @@ const DEMO_LINES = {
 };
 
 // Inbound lead flow (they came to us): book the demo first, qualify after.
-const INBOUND_FLOW = ["in_opener", "in_why", "in_trucks", "in_role", "in_details", "in_wrap"];
+const INBOUND_FLOW = ["in_opener", "in_why", "in_trucks", "in_role", "in_eld", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
 const MODES = { outbound: { label: "Cold call", main: MAIN_FLOW }, inbound: { label: "Inbound lead", main: INBOUND_FLOW } };
 
 
@@ -672,7 +672,7 @@ const flow = {
   },
   in_trucks: {
     title: "Number of trucks",
-    script: "And how many trucks are you running right now?",
+    script: "Just so we're all set for the demo, I just need to tick a few quick boxes for our specialist... it'll only take a minute. First, how many trucks are you running right now?",
     options: [
       { label: "1–2 trucks", ack: "Got it.", next: "in_role", tone: "warn", sop: { fleet: "no" }, size: "1-2", sub: "Under the 3-truck minimum. Keep the demo, but flag it to your manager." },
       { label: "3–10 trucks", ack: "Okay, perfect.", next: "in_role", tone: "go", sop: { fleet: "yes" }, size: "3-10" },
@@ -685,28 +685,76 @@ const flow = {
     title: "Position",
     script: "And what's your role there? Are you more on the owner side, running the fleet, safety, or dispatch?",
     options: [
-      { label: "Owner / Founder", ack: "Got it.", next: "in_details", tone: "go", persona: "owner", bant: { authority: "yes" }, sop: { dm: "yes" } },
-      { label: "Fleet manager / Ops", ack: "Got it.", next: "in_details", tone: "go", persona: "ops" },
-      { label: "Safety manager", ack: "Got it.", next: "in_details", tone: "go", persona: "safety" },
-      { label: "Dispatcher", ack: "Got it.", next: "in_details", tone: "go", persona: "dispatcher" },
-      { label: "Driver", ack: "Got it.", next: "in_details", tone: "warn", persona: "driver" },
-      { label: "Office / someone else", ack: "Got it.", next: "in_details", tone: "warn", persona: "gatekeeper" },
+      { label: "Owner / Founder", ack: "Got it.", next: "in_eld", tone: "go", persona: "owner", bant: { authority: "yes" }, sop: { dm: "yes" } },
+      { label: "Fleet manager / Ops", ack: "Got it.", next: "in_eld", tone: "go", persona: "ops" },
+      { label: "Safety manager", ack: "Got it.", next: "in_eld", tone: "go", persona: "safety" },
+      { label: "Dispatcher", ack: "Got it.", next: "in_eld", tone: "go", persona: "dispatcher" },
+      { label: "Driver", ack: "Got it.", next: "in_eld", tone: "warn", persona: "driver" },
+      { label: "Office / someone else", ack: "Got it.", next: "in_eld", tone: "warn", persona: "gatekeeper" },
     ],
   },
-  in_details: {
-    title: "Demo details",
-    checklist: [
-      { key: "eld", label: "ELD Provider", q: "What ELD are you using right now?" },
-      { key: "tms", label: "TMS Provider", q: "And for loads and dispatch, are you on a TMS?" },
-      { key: "pain", label: "Pain Points", q: "What's the #1 thing you'd want the demo to show you?" },
-      { key: "contact", label: "Contact Person", q: "Is it just you joining, or should anyone else be on it? And what's the best email for the invite?" },
-      { key: "schedule", label: "Demo Schedule (US Time)", q: "And what time zone are you in, so I've got it right on the invite?" },
-    ],
-    script: "Just so we're all set for the demo, I just need to tick a few quick boxes for our specialist... it'll only take a minute.",
-    note: "Tap each one once you've asked it. Type their answers in Call notes, then Copy call summary: it comes out in the demo template format.",
+  in_eld: {
+    title: "ELD provider",
+    script: "And what ELD are you using right now?",
     guard: "Never confirm an ELD integration without checking the integration list.",
     options: [
-      { label: "Got the details", ack: "Perfect.", next: "in_wrap", tone: "go" },
+      { label: "Samsara", ack: "Got it.", next: "in_tms", tone: "go", set: { eld: "Samsara" } },
+      { label: "Motive", ack: "Got it.", next: "in_tms", tone: "go", set: { eld: "Motive" } },
+      { label: "Geotab", ack: "Got it.", next: "in_tms", tone: "go", set: { eld: "Geotab" } },
+      { label: "Omnitracs", ack: "Got it.", next: "in_tms", tone: "go", set: { eld: "Omnitracs" } },
+      { label: "Platform Science", ack: "Got it.", next: "in_tms", tone: "go", set: { eld: "Platform Science" } },
+      { label: "Garmin", ack: "Got it.", next: "in_tms", tone: "go", set: { eld: "Garmin" } },
+      { label: "Other", ack: "Got it.", next: "in_tms", tone: "warn", set: { eld: "Other (see rep notes)" }, sub: "Type the name in the notes box." },
+      { label: "No ELD / not sure", ack: "No worries.", next: "in_tms", tone: "warn", set: { eld: "None / not sure" } },
+    ],
+  },
+  in_tms: {
+    title: "TMS provider",
+    script: "And for loads and dispatch, are you on a TMS?",
+    options: [
+      { label: "McLeod", ack: "Got it.", next: "in_focus", tone: "go", set: { tms: "McLeod" } },
+      { label: "Axon", ack: "Got it.", next: "in_focus", tone: "go", set: { tms: "Axon" } },
+      { label: "AscendTMS", ack: "Got it.", next: "in_focus", tone: "go", set: { tms: "AscendTMS" } },
+      { label: "TruckingOffice", ack: "Got it.", next: "in_focus", tone: "go", set: { tms: "TruckingOffice" } },
+      { label: "Rose Rocket", ack: "Got it.", next: "in_focus", tone: "go", set: { tms: "Rose Rocket" } },
+      { label: "Spreadsheets / paper", ack: "Got it, a lot of fleets are.", next: "in_focus", tone: "go", set: { tms: "Spreadsheets / paper" } },
+      { label: "Other", ack: "Got it.", next: "in_focus", tone: "warn", set: { tms: "Other (see rep notes)" }, sub: "Type the name in the notes box." },
+      { label: "No TMS", ack: "No worries.", next: "in_focus", tone: "warn", set: { tms: "None" } },
+    ],
+  },
+  in_focus: {
+    title: "#1 thing to show",
+    script: "And if the demo could show you one thing, what's the #1 thing you'd want to see?",
+    options: [
+      { label: "Fuel savings", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "Fuel" }, pains: ["fuel"] },
+      { label: "Tolls", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "Tolls" }, pains: ["tolls"] },
+      { label: "Truck-safe routing", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "Truck-safe routing" }, pains: ["restricted"] },
+      { label: "Tracking drivers / ETAs", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "Tracking / ETAs" }, pains: ["tracking"] },
+      { label: "Parking", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "Parking" }, pains: ["parking"] },
+      { label: "IFTA / reporting", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "IFTA" }, pains: ["ifta"] },
+      { label: "A bit of everything", ack: "Perfect.", next: "in_contact", tone: "warn", set: { focus: "General overview" } },
+    ],
+  },
+  in_contact: {
+    title: "Who's joining",
+    script: "Is it just you joining, or should anyone else be on it? And what's the best email for the invite?",
+    note: "Type the email in the notes box.",
+    options: [
+      { label: "Just them", ack: "Perfect.", next: "in_tz", tone: "go", set: { contact: "Just the lead" } },
+      { label: "Them + the owner / decision maker", ack: "Perfect, that's ideal.", next: "in_tz", tone: "go", set: { contact: "Lead + owner / decision maker" }, bant: { authority: "yes" }, sop: { dm: "yes" } },
+      { label: "Them + dispatch or ops team", ack: "Perfect.", next: "in_tz", tone: "go", set: { contact: "Lead + dispatch / ops" } },
+      { label: "Someone else instead", ack: "Got it.", next: "in_tz", tone: "warn", set: { contact: "Someone else (see rep notes)" }, sub: "Type their name and email in the notes box." },
+    ],
+  },
+  in_tz: {
+    title: "Time zone",
+    script: "And what time zone are you in, so I've got it right on the invite?",
+    options: [
+      { label: "Eastern", ack: "Perfect.", next: "in_wrap", tone: "go", set: { tz: "Eastern" } },
+      { label: "Central", ack: "Perfect.", next: "in_wrap", tone: "go", set: { tz: "Central" } },
+      { label: "Mountain", ack: "Perfect.", next: "in_wrap", tone: "go", set: { tz: "Mountain" } },
+      { label: "Pacific", ack: "Perfect.", next: "in_wrap", tone: "go", set: { tz: "Pacific" } },
+      { label: "Alaska / Hawaii", ack: "Perfect.", next: "in_wrap", tone: "go", set: { tz: "Alaska / Hawaii" } },
     ],
   },
   in_wrap: {
@@ -950,7 +998,7 @@ let state, history, timerStart = null, timerId = null;
 
 function freshState(mode = "outbound") {
   return {
-    mode, asked: [], cardId: MODES[mode].main[0], objectionId: null, variant: {}, log: [], persona: null, dq: null, ack: null, size: null, pains: [],
+    mode, asked: [], cardId: MODES[mode].main[0], objectionId: null, variant: {}, log: [], persona: null, dq: null, ack: null, size: null, pains: [], details: {},
     bant: { budget: "unknown", authority: "unknown", need: "unknown", timeline: "unknown" },
     sop: { fleet: "unknown", dm: "unknown", pain: "unknown", timeline: "unknown", budget: "unknown" },
   };
@@ -1025,6 +1073,7 @@ function applyMarks(o) {
   if (o.dq) state.dq = o.dq;
   if (o.size) state.size = o.size;
   if (o.demo) state.demo = o.demo;
+  if (o.set) Object.assign(state.details, o.set);
   (o.pains || []).forEach((p) => { if (!state.pains.includes(p)) state.pains.push(p); });
   Object.assign(state.bant, o.bant || {});
   Object.assign(state.sop, o.sop || {});
@@ -1253,16 +1302,17 @@ function summary() {
   const bantYes = BANT_ITEMS.filter(([k]) => state.bant[k] === "yes").length;
   const sopYes = SOP_ITEMS.filter(([k]) => state.sop[k] === "yes").length;
   const lines = [];
+  const d = state.details || {};
   if (state.mode === "inbound") {
     lines.push(
       "DEMO DETAILS",
-      "ELD Provider: ",
-      "TMS Provider: ",
+      "ELD Provider: " + (d.eld || ""),
+      "TMS Provider: " + (d.tms || ""),
       "Number of Trucks: " + (SIZE_LABEL[state.size] || ""),
-      "Pain Points: " + pains,
-      "Contact Person: ",
+      "Pain Points: " + [pains, d.focus ? "#1: " + d.focus : ""].filter(Boolean).join(" | "),
+      "Contact Person: " + (d.contact || ""),
       "Position: " + role,
-      "Demo Schedule (US Time): " + (state.demo === "now" ? "Now (live demo)" : ""),
+      "Demo Schedule (US Time): " + [state.demo === "now" ? "Now (live demo)" : state.demo === "later" ? "Later (see rep notes)" : "", d.tz].filter(Boolean).join(", "),
       "",
     );
   }
