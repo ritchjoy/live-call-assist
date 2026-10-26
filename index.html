@@ -234,6 +234,11 @@ kbd { font: 600 .75rem var(--font-body); border: 1px solid var(--line); border-b
 .log li { display: grid; grid-template-columns: 1.7em 1fr; gap: 4px; }
 .log .n { font-weight: 600; font-size: .76rem; color: var(--muted); padding-top: 2px; }
 .log .c { color: var(--muted); }
+.live {
+  margin: 10px 0 0; padding: 12px 14px; background: var(--bg); border-radius: 10px;
+  font: 400 .84rem/1.55 var(--font-body); white-space: pre-wrap; word-break: break-word;
+  max-height: 380px; overflow-y: auto;
+}
 #notes { width: 100%; min-height: 100px; margin-top: 8px; border: 1.5px solid var(--line); background: var(--bg); border-radius: 10px; padding: 10px; resize: vertical; }
 #notes:focus { border-color: var(--accent); outline: none; }
 .copy-row { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
@@ -260,6 +265,17 @@ details.never ul { margin: 8px 0 0; padding-left: 1.1em; font-size: .88rem; disp
   <section class="panel card" id="card" aria-live="polite"></section>
 
   <aside class="side">
+    <section class="panel notes-panel" aria-labelledby="notesLabel">
+      <div class="label" id="notesLabel">Live notes</div>
+      <pre class="live" id="liveNotes" aria-live="polite"></pre>
+      <textarea id="notes" placeholder="Add anything else they said: ELD, TMS, names, emails, times. It shows up in the notes above. Never put payment card details here."></textarea>
+      <div class="copy-row">
+        <button class="btn primary" id="copyBtn" type="button">Copy notes</button>
+        <span class="status" id="copyStatus" role="status"></span>
+      </div>
+      <textarea id="copyFallback" hidden readonly></textarea>
+    </section>
+
     <section class="panel" aria-labelledby="objLabel">
       <div class="label" id="objLabel">Objections</div>
       <div class="obj-list" id="objList"></div>
@@ -274,17 +290,6 @@ details.never ul { margin: 8px 0 0; padding-left: 1.1em; font-size: .88rem; disp
     <section class="panel persona-box" id="personaBox" aria-labelledby="personaLabel" hidden>
       <div class="label" id="personaLabel">Who you're talking to</div>
       <div id="personaBody"></div>
-    </section>
-
-    <section class="panel" aria-labelledby="notesLabel">
-      <div class="label" id="notesLabel">Call notes</div>
-      <ol class="log" id="log"></ol>
-      <textarea id="notes" placeholder="Specifics for the handoff: truck count, tools, their words on the pain, meeting time and time zone, email. Never put payment card details here."></textarea>
-      <div class="copy-row">
-        <button class="btn primary" id="copyBtn" type="button">Copy call summary</button>
-        <span class="status" id="copyStatus" role="status"></span>
-      </div>
-      <textarea id="copyFallback" hidden readonly></textarea>
     </section>
 
     <section class="panel">
@@ -1163,7 +1168,7 @@ function render() {
   $("objList").querySelectorAll(".obj-btn").forEach((b) => b.setAttribute("aria-current", String(b.dataset.id === state.objectionId)));
   renderQuals();
   renderPersona();
-  renderLog();
+  renderLive();
 }
 
 /* ---------- side panels ---------- */
@@ -1200,13 +1205,6 @@ function renderPersona() {
     </dl>`;
 }
 
-function renderLog() {
-  const log = $("log");
-  if (!state.log.length) { log.innerHTML = `<li><span></span><span class="c">Your path through the call shows here.</span></li>`; return; }
-  log.innerHTML = state.log.map((e, i) =>
-    `<li><span class="n">${i + 1}</span><span><span class="c">${esc(e.card)}:</span> ${esc(e.choice)}</span></li>`).join("");
-  log.scrollTop = log.scrollHeight;
-}
 
 function buildStatic() {
   $("neverList").innerHTML = NEVER_PROMISE.map((n) => `<li>${esc(n)}</li>`).join("");
@@ -1250,39 +1248,49 @@ $("newCall").addEventListener("click", () => newCall());
 /* ---------- summary ---------- */
 function summary() {
   const card = currentCard();
+  const role = state.persona ? PERSONAS[state.persona].label : "";
+  const pains = chosenPains().map((k) => PAINS[k].label).join(", ");
   const bantYes = BANT_ITEMS.filter(([k]) => state.bant[k] === "yes").length;
-  const template = state.mode === "inbound" ? [
-    "DEMO DETAILS",
-    "ELD Provider: ",
-    "TMS Provider: ",
-    "Number of Trucks: " + (SIZE_LABEL[state.size] || ""),
-    "Pain Points: " + chosenPains().map((k) => PAINS[k].label).join(", "),
-    "Contact Person: ",
-    "Position: " + (state.persona ? PERSONAS[state.persona].label : ""),
-    "Demo Schedule (US Time): " + (state.demo === "now" ? "Now (live demo)" : ""),
-    "",
-  ] : [];
-  const lines = [
-    ...template,
-    "CALL SUMMARY (rep-entered, not a transcript)",
-    "Call type: " + MODES[state.mode].label + (state.mode === "outbound" ? " (" + CAMPAIGN.name + ")" : ""),
-    "Outcome: " + (card.end ? card.title : "In progress (" + card.title + ")"),
-    card.crm ? "HubSpot: " + crmText(card) : null,
-    timerStart ? "Duration: " + $("timer").textContent : null,
-    "",
-    "Contact role: " + (state.persona ? PERSONAS[state.persona].label : "unknown"),
-    "Fleet size: " + (SIZE_LABEL[state.size] || "unknown"),
-    "Pains confirmed: " + (chosenPains().map((k) => PAINS[k].label).join(", ") || "none marked"),
-    `BANT screen: ${bantYes} of 4 (` + BANT_ITEMS.map(([k, l]) => `${l} ${STATE_LABEL[state.bant[k]].toLowerCase()}`).join(", ") + ")",
-    "Booking checklist: " + SOP_ITEMS.map(([k, l]) => `${l}: ${STATE_LABEL[state.sop[k]].toLowerCase()}`).join("; "),
-    "",
-    "Path:",
-    ...state.log.map((e, i) => `${i + 1}. ${e.card}: ${e.choice}`),
-  ].filter((l) => l !== null);
+  const sopYes = SOP_ITEMS.filter(([k]) => state.sop[k] === "yes").length;
+  const lines = [];
+  if (state.mode === "inbound") {
+    lines.push(
+      "DEMO DETAILS",
+      "ELD Provider: ",
+      "TMS Provider: ",
+      "Number of Trucks: " + (SIZE_LABEL[state.size] || ""),
+      "Pain Points: " + pains,
+      "Contact Person: ",
+      "Position: " + role,
+      "Demo Schedule (US Time): " + (state.demo === "now" ? "Now (live demo)" : ""),
+      "",
+    );
+  }
+  lines.push(`CALL NOTES (${MODES[state.mode].label.toLowerCase()})`);
+  lines.push("Outcome: " + (card.end ? card.title : "In progress, at " + card.title));
+  if (card.crm) lines.push("HubSpot: " + crmText(card));
+  if (timerStart) lines.push("Duration: " + $("timer").textContent);
+  if (state.mode === "outbound") {
+    if (role) lines.push("Role: " + role);
+    if (state.size) lines.push("Fleet: " + SIZE_LABEL[state.size]);
+    if (pains) lines.push("Pains: " + pains);
+  }
+  if (state.log.length) {
+    lines.push("Qualification: BANT " + bantYes + " of 4, booking checklist " + sopYes + " of 5");
+    lines.push("", "What happened:");
+    state.log.forEach((e) => lines.push("• " + e.card + ": " + e.choice));
+  }
   const notes = $("notes").value.trim();
-  if (notes) lines.push("", "Notes:", notes);
+  if (notes) lines.push("", "Rep notes:", notes);
   return lines.join("\n");
 }
+
+function renderLive() {
+  const el = $("liveNotes");
+  el.textContent = summary();
+  el.scrollTop = el.scrollHeight;
+}
+$("notes").addEventListener("input", renderLive);
 $("copyBtn").addEventListener("click", async () => {
   const text = summary();
   try {
