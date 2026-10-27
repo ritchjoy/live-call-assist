@@ -445,7 +445,7 @@ const DEMO_LINES = {
 };
 
 // Inbound lead flow (they came to us): book the demo first, qualify after.
-const INBOUND_FLOW = ["in_opener", "in_why", "in_trucks", "in_role", "in_eld", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
+const INBOUND_FLOW = ["in_opener", "in_trucks", "in_why", "in_role", "in_eld", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
 const MODES = { outbound: { label: "Cold call", main: MAIN_FLOW }, inbound: { label: "Inbound lead", main: INBOUND_FLOW } };
 
 
@@ -615,7 +615,7 @@ const flow = {
     script: "Hey [first name], it's [your name] from Trucker Path. You checked us out recently, and my account executive asked me to set up a quick demo with you... it's just about 5 to 10 minutes. Are you available for a quick demo now?",
     note: "Call fast; inbound leads go cold within hours. Book first. The questions come after they say yes.",
     options: [
-      { label: "Yes, now works", ack: "Awesome.", next: "in_why", tone: "go", demo: "now" },
+      { label: "Yes, now works", ack: "Awesome.", next: "in_trucks", tone: "go", demo: "now" },
       { label: "Not right now", next: "in_later", tone: "warn" },
       { label: "What's this about?", next: "in_book", tone: "warn" },
       { label: "Doesn't remember signing up", next: "in_remind", tone: "warn" },
@@ -630,7 +630,7 @@ const flow = {
     title: "Remind them",
     script: "No worries at all, you'd checked out Trucker Path recently, and my account executive asked me to set up a quick demo to show you the fleet side... it's just about 5 to 10 minutes. Are you available now?",
     options: [
-      { label: "Yes, now works", ack: "Awesome.", next: "in_why", tone: "go", demo: "now" },
+      { label: "Yes, now works", ack: "Awesome.", next: "in_trucks", tone: "go", demo: "now" },
       { label: "Not right now", next: "in_later", tone: "warn" },
       { label: "What's this about?", next: "in_book", tone: "warn" },
       { label: "Not interested", next: "obj:not_interested", tone: "warn" },
@@ -642,7 +642,7 @@ const flow = {
     build: () => inboundPitch(),
     note: "Keep it short. The demo does the selling.",
     options: [
-      { label: "Yes, now works", ack: "Awesome.", next: "in_why", tone: "go", demo: "now" },
+      { label: "Yes, now works", ack: "Awesome.", next: "in_trucks", tone: "go", demo: "now" },
       { label: "Not right now", next: "in_later", tone: "warn" },
       { label: "Send me info first", next: "obj:send_email", tone: "warn" },
       { label: "Need to check with the owner", next: "obj:need_owner", tone: "warn" },
@@ -654,19 +654,19 @@ const flow = {
     script: "No problem at all. When works better for 5 to 10 minutes, later today or tomorrow? And what time zone are you in?",
     note: "Get a specific time. Later today beats tomorrow.",
     options: [
-      { label: "Agrees a time", ack: "Perfect, you're locked in.", next: "in_why", tone: "go", demo: "later" },
+      { label: "Agrees a time", ack: "Perfect, you're locked in.", next: "in_trucks", tone: "go", demo: "later" },
       { label: "Send me info first", next: "obj:send_email", tone: "warn" },
       { label: "Not interested", next: "obj:not_interested", tone: "warn" },
     ],
   },
   in_why: {
     title: "What got them looking",
-    script: "So our specialist can tailor it to you... what got you looking at Trucker Path? Was it more truck-safe routing, fuel and tolls, keeping track of your drivers, parking, or IFTA?",
+    script: "And so our specialist can tailor it to you... what got you looking at Trucker Path? Was it more truck-safe routing, fuel and tolls, keeping track of your drivers, parking, or IFTA?",
     painPick: ["restricted", "fuel", "tolls", "tracking", "parking", "ifta", "insurance", "lastmile"],
     note: "Tap every one they mention. They become the Pain Points, and the last card tells them what the demo will show for each.",
     options: [
-      { label: "Done, they named one or more", ack: "Got it, that helps a lot.", next: "in_trucks", tone: "go", bant: { need: "yes" }, sop: { pain: "yes" } },
-      { label: "Just looking around", ack: "Totally fair.", next: "in_trucks", tone: "warn" },
+      { label: "Done, they named one or more", ack: "Got it, that helps a lot.", next: "in_role", tone: "go", bant: { need: "yes" }, sop: { pain: "yes" } },
+      { label: "Just looking around", ack: "Totally fair.", next: "in_role", tone: "warn" },
       { label: "I'm a driver, just using the app", next: "in_driver_only", tone: "stop" },
     ],
   },
@@ -674,11 +674,11 @@ const flow = {
     title: "Number of trucks",
     script: "Just so we're all set for the demo, I just need to tick a few quick boxes for our specialist... it'll only take a minute. First, how many trucks are you running right now?",
     options: [
-      { label: "1–2 trucks", ack: "Got it.", next: "in_role", tone: "warn", sop: { fleet: "no" }, size: "1-2", sub: "Under the 3-truck minimum. Keep the demo, but flag it to your manager." },
-      { label: "3–10 trucks", ack: "Okay, perfect.", next: "in_role", tone: "go", sop: { fleet: "yes" }, size: "3-10" },
-      { label: "11–50 trucks", ack: "Okay, perfect.", next: "in_role", tone: "go", sop: { fleet: "yes" }, size: "11-50" },
-      { label: "50+ trucks", ack: "Oh nice, that's a solid operation.", next: "in_role", tone: "go", sop: { fleet: "yes" }, size: "50+" },
-      { label: "Rather not say", ack: "No worries at all.", next: "in_role", tone: "warn", sop: { fleet: "unknown" } },
+      { label: "1–2 trucks", ack: "Got it.", next: "in_why", tone: "warn", sop: { fleet: "no" }, size: "1-2", sub: "Under the 3-truck minimum. Keep the demo, but flag it to your manager." },
+      { label: "3–10 trucks", ack: "Okay, perfect.", next: "in_why", tone: "go", sop: { fleet: "yes" }, size: "3-10" },
+      { label: "11–50 trucks", ack: "Okay, perfect.", next: "in_why", tone: "go", sop: { fleet: "yes" }, size: "11-50" },
+      { label: "50+ trucks", ack: "Oh nice, that's a solid operation.", next: "in_why", tone: "go", sop: { fleet: "yes" }, size: "50+" },
+      { label: "Rather not say", ack: "No worries at all.", next: "in_why", tone: "warn", sop: { fleet: "unknown" } },
     ],
   },
   in_role: {
