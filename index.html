@@ -446,7 +446,7 @@ const DEMO_LINES = {
 
 // Inbound lead flow (they came to us): book the demo first, qualify after.
 const INBOUND_FLOW = ["in_opener", "in_trucks", "in_why", "in_role", "in_eld", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
-const MODES = { outbound: { label: "Cold call", main: MAIN_FLOW }, inbound: { label: "Inbound lead", main: INBOUND_FLOW } };
+const MODES = { inbound: { label: "Inbound lead", main: INBOUND_FLOW }, outbound: { label: "Cold call", main: MAIN_FLOW } };
 
 
 const flow = {
@@ -996,7 +996,7 @@ const SOP_ITEMS = [["fleet", `Fleet ${CAMPAIGN.minTrucks}+ trucks`], ["dm", "Dec
 const $ = (id) => document.getElementById(id);
 let state, history, timerStart = null, timerId = null;
 
-function freshState(mode = "outbound") {
+function freshState(mode = "inbound") {
   return {
     mode, asked: [], cardId: MODES[mode].main[0], objectionId: null, variant: {}, log: [], persona: null, dq: null, ack: null, size: null, pains: [], details: {},
     bant: { budget: "unknown", authority: "unknown", need: "unknown", timeline: "unknown" },
