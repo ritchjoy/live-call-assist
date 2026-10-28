@@ -853,21 +853,56 @@ const objections = {
   not_interested: {
     title: "Not interested",
     script: "Totally fair, most people I call say the same thing before they know why I'm calling. Can I ask just one thing: is that because the way you handle routing works well today, or it's just not a priority right now?",
-    note: "Ask once. If they decline, close politely.",
+    note: "Rebuttal 1 of 2. Get curious, don't argue.",
     options: [
       { label: "Opens up, back to the script", ack: "Appreciate you sharing that.", next: "resume", tone: "go" },
-      { label: "Not a priority", next: "polite_close", tone: "stop", dq: "Bad Timing" },
-      { label: "Declines to talk", next: "end_lost", tone: "stop", dq: "No Interest" },
+      { label: "Not a priority", next: "obj:ni_priority", tone: "warn" },
+      { label: "Declines to talk", next: "obj:ni_declines", tone: "warn" },
       { label: "Don't call me again", next: "end_dnc", tone: "stop" },
+    ],
+  },
+  ni_priority: {
+    title: "Not a priority",
+    hidden: true,
+    script: "Totally fair, and I'm not trying to change your priorities. Just out of curiosity, what's taking up most of your time on the operations side right now?",
+    note: "Rebuttal 2 of 2. Open question, then listen. Their answer is often a pain we solve.",
+    options: [
+      { label: "Shares a pain, back to the script", ack: "That's really helpful, thanks for sharing.", next: "resume", tone: "go" },
+      { label: "Open to a quick look", ack: "Awesome, appreciate that.", next: "book", tone: "go" },
+      { label: "Maybe later this year", next: "callback", tone: "warn", bant: { timeline: "no" } },
+      { label: "Still a no", next: "polite_close", tone: "stop", dq: "Bad Timing" },
+    ],
+  },
+  ni_declines: {
+    title: "Declines to talk",
+    hidden: true,
+    script: "No problem, I'll let you go. Just before I do... how are your drivers getting their routes today? Phone GPS, or something built for trucks?",
+    note: "Rebuttal 2 of 2. One easy question. If it's still a no, respect it.",
+    options: [
+      { label: "Answers, back to the script", ack: "Got it, appreciate that.", next: "resume", tone: "go" },
+      { label: "Open to a quick look", ack: "Awesome, appreciate that.", next: "book", tone: "go" },
+      { label: "Still a no", next: "end_lost", tone: "stop", dq: "No Interest" },
     ],
   },
   priorities: {
     title: "Other priorities right now",
     script: "Totally fair, most people I call have a full plate. Is routing just further down the list for now, or is it something you'd want to look at later this year?",
+    note: "Rebuttal 1 of 2.",
     options: [
       { label: "Opens up, back to the script", ack: "Appreciate you sharing that.", next: "resume", tone: "go" },
       { label: "Later this year", next: "callback", tone: "warn", bant: { timeline: "no" } },
-      { label: "Not at all", next: "polite_close", tone: "stop", dq: "No Interest" },
+      { label: "Not at all", next: "obj:prio_2", tone: "warn" },
+    ],
+  },
+  prio_2: {
+    title: "Not on the list at all",
+    hidden: true,
+    script: "Understood. Just so I know for next time... what would have to happen for routing to make the list? A ticket, a truck under a low bridge, fuel going up?",
+    note: "Rebuttal 2 of 2. Open question, then listen.",
+    options: [
+      { label: "Names a trigger or pain, back to the script", ack: "That's really helpful, thanks.", next: "resume", tone: "go" },
+      { label: "Open to a quick look", ack: "Awesome, appreciate that.", next: "book", tone: "go" },
+      { label: "Still a no", next: "polite_close", tone: "stop", dq: "No Interest" },
     ],
   },
   send_email: {
@@ -919,7 +954,19 @@ const objections = {
     options: [
       { label: "Opens up, back to the script", ack: "Appreciate you sharing that.", next: "resume", tone: "go" },
       { label: "Open to a demo", ack: "Perfect.", next: "book", tone: "go" },
-      { label: "Still no time for it", next: "polite_close", tone: "stop", dq: "Bad Timing" },
+      { label: "Still no time for it", next: "obj:setup_2", tone: "warn" },
+    ],
+  },
+  setup_2: {
+    title: "Still no time to set up",
+    hidden: true,
+    script: "Makes sense, your time's tight. Out of curiosity, what's eating up most of the office's time right now? Because if it's chasing drivers or fixing routes, that's usually what this takes off your plate.",
+    note: "Rebuttal 2 of 2. Open question, then listen.",
+    options: [
+      { label: "Shares a pain, back to the script", ack: "That's really helpful, thanks.", next: "resume", tone: "go" },
+      { label: "Open to a quick look", ack: "Awesome, appreciate that.", next: "book", tone: "go" },
+      { label: "Maybe later", next: "callback", tone: "warn" },
+      { label: "Still a no", next: "polite_close", tone: "stop", dq: "Bad Timing" },
     ],
   },
   adoption: {
@@ -928,6 +975,17 @@ const objections = {
     options: [
       { label: "Opens up, back to the script", ack: "Appreciate you sharing that.", next: "resume", tone: "go" },
       { label: "Open to a demo", ack: "Perfect.", next: "book", tone: "go" },
+      { label: "Still a no", next: "obj:adoption_2", tone: "warn" },
+    ],
+  },
+  adoption_2: {
+    title: "Drivers still won't use it",
+    hidden: true,
+    script: "Fair enough, you know your drivers best. Out of curiosity, what have they pushed back on before with other apps?",
+    note: "Rebuttal 2 of 2. Let them vent. The answer tells the AE what to show.",
+    options: [
+      { label: "Shares what drivers disliked, back to the script", ack: "That's really helpful, thanks.", next: "resume", tone: "go" },
+      { label: "Open to a quick look", ack: "Awesome, appreciate that.", next: "book", tone: "go" },
       { label: "Still a no", next: "polite_close", tone: "stop", dq: "Not a Good Fit" },
     ],
   },
@@ -939,7 +997,19 @@ const objections = {
       { label: "That's reasonable", ack: "Glad that helps.", next: "book", tone: "go", bant: { budget: "yes" }, sop: { budget: "yes" } },
       { label: "Need to see the value first", ack: "Totally fair.", next: "book", tone: "go", bant: { budget: "unknown" }, sop: { budget: "unknown" } },
       { label: "Timing's off", next: "timeline", tone: "warn" },
-      { label: "No ability to spend", next: "polite_close", tone: "stop", bant: { budget: "no" }, sop: { budget: "no" }, dq: "Budget Constraints" },
+      { label: "No ability to spend", next: "obj:price_2", tone: "warn" },
+    ],
+  },
+  price_2: {
+    title: "No budget",
+    hidden: true,
+    script: "Totally understand, budgets are tight for everyone right now. Just so I understand... is it that there's no budget at all, or that it would need to pay for itself? What's costing you the most right now, fuel, tolls, or tickets?",
+    note: "Rebuttal 2 of 2. Find out if it's a real no or a value question.",
+    guard: "Don't promise savings or ROI numbers.",
+    options: [
+      { label: "Needs to pay for itself", ack: "Totally fair, that's what the demo is for.", next: "book", tone: "go", bant: { budget: "unknown" }, sop: { budget: "unknown" } },
+      { label: "Revisit later", next: "callback", tone: "warn", bant: { timeline: "no" } },
+      { label: "No budget at all", next: "polite_close", tone: "stop", bant: { budget: "no" }, sop: { budget: "no" }, dq: "Budget Constraints" },
     ],
   },
   too_busy: {
@@ -967,7 +1037,18 @@ const objections = {
     options: [
       { label: "Office manages routes", ack: "Got it, thanks.", next: "resume", tone: "go" },
       { label: "Drivers choose, open to talking", ack: "Got it, appreciate that.", next: "resume", tone: "go" },
-      { label: "No interest", next: "polite_close", tone: "stop", dq: "No Interest" },
+      { label: "No interest", next: "obj:gps_2", tone: "warn" },
+    ],
+  },
+  gps_2: {
+    title: "Happy with phones / GPS",
+    hidden: true,
+    script: "Totally fair. Can I ask... has a driver ever ended up on a road or under a bridge they shouldn't have been on? How did that get handled?",
+    note: "Rebuttal 2 of 2. Open question, then listen.",
+    options: [
+      { label: "Yes, shares a story, back to the script", ack: "Yeah, that's exactly what this helps with.", next: "resume", tone: "go" },
+      { label: "Open to a quick look", ack: "Awesome, appreciate that.", next: "book", tone: "go" },
+      { label: "Never an issue, still a no", next: "polite_close", tone: "stop", dq: "No Interest" },
     ],
   },
   need_owner: {
@@ -977,7 +1058,19 @@ const objections = {
     options: [
       { label: "Decision maker can join", ack: "Perfect, appreciate that.", next: "book", tone: "go", bant: { authority: "yes" }, sop: { dm: "yes" } },
       { label: "Intro or callback only", next: "callback", tone: "warn" },
-      { label: "No", next: "polite_close", tone: "stop", dq: "No Decision-making Power" },
+      { label: "No", next: "obj:owner_2", tone: "warn" },
+    ],
+  },
+  owner_2: {
+    title: "Owner can't join",
+    hidden: true,
+    script: "No problem. When you bring it to them, what do you think would matter most to them? Fuel, tolls, or keeping the drivers safe?",
+    note: "Rebuttal 2 of 2. Find what the owner cares about, then aim for a callback or intro.",
+    options: [
+      { label: "Shares what matters, back to the script", ack: "That's really helpful, thanks.", next: "resume", tone: "go" },
+      { label: "Callback with the owner", next: "callback", tone: "warn" },
+      { label: "Will pass on an email", next: "end_email", tone: "warn" },
+      { label: "Still a no", next: "polite_close", tone: "stop", dq: "No Decision-making Power" },
     ],
   },
   dnc: {
