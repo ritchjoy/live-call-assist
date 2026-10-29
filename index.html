@@ -444,8 +444,8 @@ const DEMO_LINES = {
   eld: "how it would connect with the ELD you already use",
 };
 
-// Inbound lead flow (they came to us): book the demo first, qualify after.
-const INBOUND_FLOW = ["in_opener", "in_trucks", "in_why", "in_role", "in_eld", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
+// Inbound lead flow (they came to us): sort the lead, book the demo first, qualify after.
+const INBOUND_FLOW = ["in_opener", "in_book", "in_trucks", "in_why", "in_role", "in_eld", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
 const MODES = { inbound: { label: "Inbound lead", main: INBOUND_FLOW }, outbound: { label: "Cold call", main: MAIN_FLOW } };
 
 
@@ -612,41 +612,61 @@ const flow = {
   /* ---------- Inbound lead: they came to us. Book the demo first, qualify after. ---------- */
   in_opener: {
     title: "Inbound opener",
-    script: "Hey [first name], it's [your name] from Trucker Path. You checked us out recently, and my account executive asked me to set up a quick demo with you... it's just about 5 to 10 minutes. Are you available for a quick demo now?",
-    note: "Call fast; inbound leads go cold within hours. Book first. The questions come after they say yes.",
+    script: "Hey [first name], it's [your name] from Trucker Path. I saw you've been checking us out, so I wanted to reach out personally. Are you mainly looking to find better-paying loads, or to keep track of your trucks and drivers?",
+    note: "Call fast; inbound leads go cold within hours. Options 1–4 are answers to your question. 5–9 are what they might say instead.",
+    guard: "They came to us. Don't ask permission to talk, and never open with \"Did I catch you at a bad time?\"",
     options: [
-      { label: "Yes, now works", ack: "Awesome.", next: "in_trucks", tone: "go", demo: "now" },
-      { label: "Not right now", next: "in_later", tone: "warn" },
-      { label: "What's this about?", next: "in_book", tone: "warn" },
+      { label: "Loads", next: "in_loads", tone: "go", sub: "Goes to the Truckloads check." },
+      { label: "Trucks and drivers", ack: "Got it.", next: "in_book", tone: "go" },
+      { label: "Both", ack: "Got it, love that.", next: "in_book", tone: "go" },
+      { label: "Not sure / just looking", ack: "Totally fair.", next: "in_book", tone: "warn" },
       { label: "Doesn't remember signing up", next: "in_remind", tone: "warn" },
-      { label: "Send me info first", next: "obj:send_email", tone: "warn" },
-      { label: "Need to check with the owner", next: "obj:need_owner", tone: "warn" },
-      { label: "How much is it?", next: "obj:price", tone: "warn" },
+      { label: "What's this about?", ack: "Sure.", next: "in_book", tone: "warn" },
       { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
-      { label: "I'm a driver, just using the app", next: "in_driver_only", tone: "stop" },
+      { label: "How much is it?", next: "obj:price", tone: "warn" },
+      { label: "Company driver, doesn't run trucks", next: "in_driver_only", tone: "stop" },
     ],
   },
   in_remind: {
     title: "Remind them",
-    script: "No worries at all, you'd checked out Trucker Path recently, and my account executive asked me to set up a quick demo to show you the fleet side... it's just about 5 to 10 minutes. Are you available now?",
+    script: "No worries at all. You'd checked out Trucker Path recently, on the app or our website. Are you mainly looking to find better-paying loads, or to keep track of your trucks and drivers?",
     options: [
-      { label: "Yes, now works", ack: "Awesome.", next: "in_trucks", tone: "go", demo: "now" },
-      { label: "Not right now", next: "in_later", tone: "warn" },
-      { label: "What's this about?", next: "in_book", tone: "warn" },
+      { label: "Loads", next: "in_loads", tone: "go" },
+      { label: "Trucks and drivers", ack: "Got it.", next: "in_book", tone: "go" },
+      { label: "Both", ack: "Got it, love that.", next: "in_book", tone: "go" },
+      { label: "What's this about?", ack: "Sure.", next: "in_book", tone: "warn" },
       { label: "Not interested", next: "obj:not_interested", tone: "warn" },
-      { label: "I'm a driver, just using the app", next: "in_driver_only", tone: "stop" },
+      { label: "Company driver, doesn't run trucks", next: "in_driver_only", tone: "stop" },
     ],
   },
-  in_book: {
-    title: "What's this about?",
-    build: () => inboundPitch(),
-    note: "Keep it short. The demo does the selling.",
+  in_loads: {
+    title: "Looking for loads",
+    script: "Got it, that's our Truckloads load board. Just so I point you to the right person... are you running just your own truck, or do you have other trucks and drivers too?",
+    note: "Don't disqualify a load board lead. One truck goes to the Truckloads team; two or more can still be a fleet demo.",
     options: [
-      { label: "Yes, now works", ack: "Awesome.", next: "in_trucks", tone: "go", demo: "now" },
-      { label: "Not right now", next: "in_later", tone: "warn" },
+      { label: "Just their own truck", next: "in_loads_end", tone: "warn", size: "1-2" },
+      { label: "2 or more trucks", ack: "Oh nice. Then the fleet side is worth a look too.", next: "in_book", tone: "go" },
+      { label: "Company driver, doesn't run trucks", next: "in_driver_only", tone: "stop" },
+    ],
+  },
+  in_loads_end: {
+    title: "Handed to Truckloads",
+    end: true,
+    script: "Perfect. I'll have my colleague who looks after Truckloads reach out to help you get the most out of the load board. Thanks so much, [first name]!",
+    note: "Reassign the lead to the Truckloads team and note they're looking for loads. Don't disqualify it.",
+    guard: "Only say a colleague will reach out if you reassign the lead today.",
+  },
+  in_book: {
+    title: "Book the demo",
+    build: () => inboundPitch(),
+    note: "Keep it short. The demo does the selling. Offer two times, not a yes/no.",
+    options: [
+      { label: "Now works", ack: "Awesome.", next: "in_trucks", tone: "go", demo: "now" },
+      { label: "Later today or tomorrow", next: "in_later", tone: "go" },
       { label: "Send me info first", next: "obj:send_email", tone: "warn" },
       { label: "Need to check with the owner", next: "obj:need_owner", tone: "warn" },
       { label: "How much is it?", next: "obj:price", tone: "warn" },
+      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
     ],
   },
   in_later: {
@@ -672,7 +692,7 @@ const flow = {
   },
   in_trucks: {
     title: "Number of trucks",
-    script: "Just so we're all set for the demo, I just need to tick a few quick boxes for our specialist... it'll only take a minute. First, how many trucks are you running right now?",
+    script: "So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute. First, how many trucks are you running right now?",
     options: [
       { label: "1–2 trucks", ack: "Got it.", next: "in_why", tone: "warn", sop: { fleet: "no" }, size: "1-2", sub: "Under the 3-truck minimum. Keep the demo, but flag it to your manager." },
       { label: "3–10 trucks", ack: "Okay, perfect.", next: "in_why", tone: "go", sop: { fleet: "yes" }, size: "3-10" },
@@ -1132,10 +1152,8 @@ function valuePitch() {
 }
 
 function inboundPitch() {
-  const lines = chosenPains().slice(0, 2).map((k) => PAINS[k].pitch);
-  if (lines.length) lines[0] = lines[0].replace(/^And (\w)/, (_, c) => c.toUpperCase());
-  return (lines.length ? lines.join("\n\n") + "\n\n" : "Totally. Quick version... it's the fleet side of Trucker Path. Your dispatch sends truck-safe routes straight to the drivers, with parking, fuel and live tracking in one place.\n\n") +
-    "Honestly, the easiest way to see what it'd do for your fleet is a quick demo, just 5 to 10 minutes. Are you available for one now?";
+  return "Quick version... our fleet side, NavPro, lets your dispatch send truck-safe routes straight to the drivers, with parking, fuel and live tracking in one place.\n\n" +
+    "The easiest way to see it for your fleet is a quick demo with our specialist, just 5 to 10 minutes. Do you have time now, or is later today better?";
 }
 
 function demoPreview() {
@@ -1178,7 +1196,8 @@ function go(o) {
   state.log.push({ card: currentCard().title, choice: o.label });
   applyMarks(o);
   state.ack = o.ack || null;
-  const next = state.mode === "inbound" && o.next === "book" ? "in_book" : o.next;
+  const INBOUND_REMAP = { book: "in_book", timeline: "in_later" };
+  const next = (state.mode === "inbound" && INBOUND_REMAP[o.next]) || o.next;
   if (next === "resume") state.objectionId = null;
   else if (next.startsWith("obj:")) state.objectionId = next.slice(4);
   else { state.cardId = next; state.objectionId = null; }
