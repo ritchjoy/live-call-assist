@@ -312,7 +312,8 @@ details.never ul { margin: 8px 0 0; padding-left: 1.1em; font-size: .88rem; disp
    {key} in a script shows as a [reminder] using the wording in PLACEHOLDERS.
    [Any bracketed text] shows as a fill-in reminder.
    Option fields:
-     next     card id, "obj:<id>", or "resume" (back to the script after an objection)
+     next     card id, "obj:<id>", "continue" (they agree to keep talking) or "pain" (they opened up
+              about a problem). Both leave the objection; see afterObjection() for where they land.
      tone     "go" green, "warn" amber, "stop" red
      persona  sets who is on the call (see PERSONAS)
      bant     e.g. { need: "yes" }   (budget, authority, need, timeline)
@@ -875,7 +876,7 @@ const objections = {
     script: "Totally fair, most people I call say the same thing before they know why I'm calling. Can I ask just one thing: is that because the way you handle routing works well today, or it's just not a priority right now?",
     note: "Rebuttal 1 of 2. Get curious, don't argue.",
     options: [
-      { label: "Opens up, back to the script", ack: "Appreciate you sharing that.", next: "resume", tone: "go" },
+      { label: "Opens up", ack: "Appreciate you sharing that.", next: "pain", tone: "go" },
       { label: "Not a priority", next: "obj:ni_priority", tone: "warn" },
       { label: "Declines to talk", next: "obj:ni_declines", tone: "warn" },
       { label: "Don't call me again", next: "end_dnc", tone: "stop" },
@@ -887,7 +888,7 @@ const objections = {
     script: "Totally fair, and I'm not trying to change your priorities. Just out of curiosity, what's taking up most of your time on the operations side right now?",
     note: "Rebuttal 2 of 2. Open question, then listen. Their answer is often a pain we solve.",
     options: [
-      { label: "Shares a pain, back to the script", ack: "That's really helpful, thanks for sharing.", next: "resume", tone: "go" },
+      { label: "Shares a pain", ack: "That's really helpful, thanks for sharing.", next: "pain", tone: "go" },
       { label: "Open to a quick look", ack: "Awesome, appreciate that.", next: "book", tone: "go" },
       { label: "Maybe later this year", next: "callback", tone: "warn", bant: { timeline: "no" } },
       { label: "Still a no", next: "polite_close", tone: "stop", dq: "Bad Timing" },
@@ -899,7 +900,7 @@ const objections = {
     script: "No problem, I'll let you go. Just before I do... how are your drivers getting their routes today? Phone GPS, or something built for trucks?",
     note: "Rebuttal 2 of 2. One easy question. If it's still a no, respect it.",
     options: [
-      { label: "Answers, back to the script", ack: "Got it, appreciate that.", next: "resume", tone: "go" },
+      { label: "Answers", ack: "Got it, appreciate that.", next: "pain", tone: "go" },
       { label: "Open to a quick look", ack: "Awesome, appreciate that.", next: "book", tone: "go" },
       { label: "Still a no", next: "end_lost", tone: "stop", dq: "No Interest" },
     ],
@@ -909,7 +910,7 @@ const objections = {
     script: "Totally fair, most people I call have a full plate. Is routing just further down the list for now, or is it something you'd want to look at later this year?",
     note: "Rebuttal 1 of 2.",
     options: [
-      { label: "Opens up, back to the script", ack: "Appreciate you sharing that.", next: "resume", tone: "go" },
+      { label: "Opens up", ack: "Appreciate you sharing that.", next: "pain", tone: "go" },
       { label: "Later this year", next: "callback", tone: "warn", bant: { timeline: "no" } },
       { label: "Not at all", next: "obj:prio_2", tone: "warn" },
     ],
@@ -920,7 +921,7 @@ const objections = {
     script: "Understood. Just so I know for next time... what would have to happen for routing to make the list? A ticket, a truck under a low bridge, fuel going up?",
     note: "Rebuttal 2 of 2. Open question, then listen.",
     options: [
-      { label: "Names a trigger or pain, back to the script", ack: "That's really helpful, thanks.", next: "resume", tone: "go" },
+      { label: "Names a trigger or pain", ack: "That's really helpful, thanks.", next: "pain", tone: "go" },
       { label: "Open to a quick look", ack: "Awesome, appreciate that.", next: "book", tone: "go" },
       { label: "Still a no", next: "polite_close", tone: "stop", dq: "No Interest" },
     ],
@@ -931,7 +932,7 @@ const objections = {
     guard: "An email request isn't a demo or marketing consent. Don't say it's sent unless it actually was.",
     options: [
       { label: "Open to a short call instead", ack: "Love that, appreciate it.", next: "book", tone: "go" },
-      { label: "Back to the script", ack: "Appreciate that.", next: "resume", tone: "go" },
+      { label: "Happy to keep talking", ack: "Appreciate that.", next: "continue", tone: "go" },
       { label: "Just the email", next: "end_email", tone: "warn" },
     ],
   },
@@ -940,7 +941,7 @@ const objections = {
     script: "Makes sense, most fleets I call already have something. And honestly, this isn't a replacement... it connects with over 30 ELDs, like Samsara and Platform Science, and adds truck-safe routing, parking and fuel on top. What are you using, and what's still a pain with it?",
     guard: "Don't knock the incumbent. Check the integration list before confirming their exact ELD works.",
     options: [
-      { label: "Names a gap, back to the script", ack: "That's really helpful, thanks.", next: "resume", tone: "go" },
+      { label: "Names a gap", ack: "That's really helpful, thanks.", next: "pain", tone: "go" },
       { label: "Already a Trucker Path / NavPro customer", next: "end_existing", tone: "warn" },
       { label: "Happy with what they have", next: "obj:happy_1", tone: "warn" },
     ],
@@ -952,8 +953,8 @@ const objections = {
     note: "Rebuttal 1 of 2. Get curious about the routing gap, not the ELD.",
     guard: "Don't knock their ELD or claim what it can't do.",
     options: [
-      { label: "Phone GPS / car apps / drivers figure it out", ack: "Yeah, that's exactly the gap we fill.", next: "resume", tone: "go" },
-      { label: "Opens up about another pain", ack: "That's really helpful, thanks.", next: "resume", tone: "go" },
+      { label: "Phone GPS / car apps / drivers figure it out", ack: "Yeah, that's exactly the gap we fill.", next: "pain", tone: "go" },
+      { label: "Opens up about another pain", ack: "That's really helpful, thanks.", next: "pain", tone: "go" },
       { label: "Still happy, no need", next: "obj:happy_2", tone: "warn" },
     ],
   },
@@ -972,7 +973,7 @@ const objections = {
     script: "Totally fair, nobody wants another project. It takes about two minutes to get started, there's a spreadsheet template for your trucks, and our onboarding team sets up the truck profiles with you. Would it help to see that on a quick demo?",
     note: "\"Two minutes\" is Trucker Path's own marketing number. Present it that way if they push.",
     options: [
-      { label: "Opens up, back to the script", ack: "Appreciate you sharing that.", next: "resume", tone: "go" },
+      { label: "Opens up", ack: "Appreciate you sharing that.", next: "continue", tone: "go" },
       { label: "Open to a demo", ack: "Perfect.", next: "book", tone: "go" },
       { label: "Still no time for it", next: "obj:setup_2", tone: "warn" },
     ],
@@ -983,7 +984,7 @@ const objections = {
     script: "Makes sense, your time's tight. Out of curiosity, what's eating up most of the office's time right now? Because if it's chasing drivers or fixing routes, that's usually what this takes off your plate.",
     note: "Rebuttal 2 of 2. Open question, then listen.",
     options: [
-      { label: "Shares a pain, back to the script", ack: "That's really helpful, thanks.", next: "resume", tone: "go" },
+      { label: "Shares a pain", ack: "That's really helpful, thanks.", next: "pain", tone: "go" },
       { label: "Open to a quick look", ack: "Awesome, appreciate that.", next: "book", tone: "go" },
       { label: "Maybe later", next: "callback", tone: "warn" },
       { label: "Still a no", next: "polite_close", tone: "stop", dq: "Bad Timing" },
@@ -993,7 +994,7 @@ const objections = {
     title: "Drivers won't use another app",
     script: "Totally fair, drivers hate new apps. This one's built for them... it works on Apple CarPlay, has offline maps, a Spanish version and night mode. And a lot of drivers already use Trucker Path for parking. Would it help if the demo showed exactly what the driver sees?",
     options: [
-      { label: "Opens up, back to the script", ack: "Appreciate you sharing that.", next: "resume", tone: "go" },
+      { label: "Opens up", ack: "Appreciate you sharing that.", next: "continue", tone: "go" },
       { label: "Open to a demo", ack: "Perfect.", next: "book", tone: "go" },
       { label: "Still a no", next: "obj:adoption_2", tone: "warn" },
     ],
@@ -1004,7 +1005,7 @@ const objections = {
     script: "Fair enough, you know your drivers best. Out of curiosity, what have they pushed back on before with other apps?",
     note: "Rebuttal 2 of 2. Let them vent. The answer tells the AE what to show.",
     options: [
-      { label: "Shares what drivers disliked, back to the script", ack: "That's really helpful, thanks.", next: "resume", tone: "go" },
+      { label: "Shares what drivers disliked", ack: "That's really helpful, thanks.", next: "continue", tone: "go" },
       { label: "Open to a quick look", ack: "Awesome, appreciate that.", next: "book", tone: "go" },
       { label: "Still a no", next: "polite_close", tone: "stop", dq: "Not a Good Fit" },
     ],
@@ -1037,7 +1038,7 @@ const objections = {
     script: "Totally fair. Should I call back at a specific time, or would you rather I leave it?",
     options: [
       { label: "Call back later", next: "callback", tone: "go" },
-      { label: "Gives you 30 seconds now", ack: "Appreciate it, I'll be quick.", next: "resume", tone: "go" },
+      { label: "Gives you 30 seconds now", ack: "Appreciate it, I'll be quick.", next: "continue", tone: "go" },
       { label: "Leave it", next: "end_lost", tone: "stop", dq: "No Interest" },
     ],
   },
@@ -1046,7 +1047,7 @@ const objections = {
     script: "Fair question. I don't want to guess, so I'll check our records and let you know. And if you'd rather I didn't call again, just say and I'll make sure of it.",
     note: "If you have a verified source, say it. Otherwise don't guess.",
     options: [
-      { label: "Okay, go on", ack: "Thanks, appreciate that.", next: "resume", tone: "go" },
+      { label: "Okay, go on", ack: "Thanks, appreciate that.", next: "continue", tone: "go" },
       { label: "Stop contacting me", next: "end_dnc", tone: "stop" },
     ],
   },
@@ -1055,8 +1056,8 @@ const objections = {
     script: "Makes sense, a lot of fleets I call start there. Does the office set up truck profiles and send routes to drivers, or does each driver pick their own route?",
     guard: "Talk about their workflow, not replacing devices. No competitor claims.",
     options: [
-      { label: "Office manages routes", ack: "Got it, thanks.", next: "resume", tone: "go" },
-      { label: "Drivers choose, open to talking", ack: "Got it, appreciate that.", next: "resume", tone: "go" },
+      { label: "Office manages routes", ack: "Got it, thanks.", next: "pain", tone: "go" },
+      { label: "Drivers choose, open to talking", ack: "Got it, appreciate that.", next: "pain", tone: "go" },
       { label: "No interest", next: "obj:gps_2", tone: "warn" },
     ],
   },
@@ -1066,7 +1067,7 @@ const objections = {
     script: "Totally fair. Can I ask... has a driver ever ended up on a road or under a bridge they shouldn't have been on? How did that get handled?",
     note: "Rebuttal 2 of 2. Open question, then listen.",
     options: [
-      { label: "Yes, shares a story, back to the script", ack: "Yeah, that's exactly what this helps with.", next: "resume", tone: "go" },
+      { label: "Yes, shares a story", ack: "Yeah, that's exactly what this helps with.", next: "pain", tone: "go" },
       { label: "Open to a quick look", ack: "Awesome, appreciate that.", next: "book", tone: "go" },
       { label: "Never an issue, still a no", next: "polite_close", tone: "stop", dq: "No Interest" },
     ],
@@ -1087,7 +1088,7 @@ const objections = {
     script: "No problem. When you bring it to them, what do you think would matter most to them? Fuel, tolls, or keeping the drivers safe?",
     note: "Rebuttal 2 of 2. Find what the owner cares about, then aim for a callback or intro.",
     options: [
-      { label: "Shares what matters, back to the script", ack: "That's really helpful, thanks.", next: "resume", tone: "go" },
+      { label: "Shares what matters", ack: "That's really helpful, thanks.", next: "pain", tone: "go" },
       { label: "Callback with the owner", next: "callback", tone: "warn" },
       { label: "Will pass on an email", next: "end_email", tone: "warn" },
       { label: "Still a no", next: "polite_close", tone: "stop", dq: "No Decision-making Power" },
@@ -1127,8 +1128,33 @@ function fill(text) {
     .replace(/ ?\(([a-z][a-z ]{0,18})\) ?/g, " ");
 }
 
+/* Where the call goes after an objection is handled. Going back to an opener
+   would make the rep re-ask a question that's already been passed, so those
+   move forward. "pain" moves one step further: they've opened up, so skip the
+   question that was fishing for it. Everything later resumes the same card. */
+const AFTER_OBJECTION = {
+  continue: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "reason" },
+  pain: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "reason", reason: "pitch", pitch: "fleet" },
+};
+
+function afterObjection(kind) {
+  return (AFTER_OBJECTION[kind] || {})[state.cardId] || state.cardId;
+}
+
+// Inbound uses its own booking cards; once the demo is booked, don't ask for it again.
+function routeFor(next) {
+  if (state.mode !== "inbound" || (next !== "book" && next !== "timeline")) return next;
+  if (state.demo) return "continue";
+  return next === "book" ? "in_book" : "in_later";
+}
+
 function titleFor(next) {
+  next = routeFor(next);
   if (next === "resume") return "Back to " + flow[state.cardId].title.toLowerCase();
+  if (AFTER_OBJECTION[next]) {
+    const to = afterObjection(next);
+    return (to === state.cardId ? "Back to " : "On to ") + flow[to].title.toLowerCase();
+  }
   if (next.startsWith("obj:")) return "Objection: " + objections[next.slice(4)].title;
   return flow[next] ? flow[next].title : next;
 }
@@ -1196,9 +1222,9 @@ function go(o) {
   state.log.push({ card: currentCard().title, choice: o.label });
   applyMarks(o);
   state.ack = o.ack || null;
-  const INBOUND_REMAP = { book: "in_book", timeline: "in_later" };
-  const next = (state.mode === "inbound" && INBOUND_REMAP[o.next]) || o.next;
+  const next = routeFor(o.next);
   if (next === "resume") state.objectionId = null;
+  else if (AFTER_OBJECTION[next]) { state.cardId = afterObjection(next); state.objectionId = null; }
   else if (next.startsWith("obj:")) state.objectionId = next.slice(4);
   else { state.cardId = next; state.objectionId = null; }
   render();
