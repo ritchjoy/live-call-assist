@@ -103,7 +103,6 @@ button { -webkit-tap-highlight-color: transparent; }
 
 /* Grid */
 .console { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
-@media (max-width: 900px) { .console { grid-template-columns: minmax(0, 1fr); } }
 
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
 .label { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
@@ -125,14 +124,14 @@ button { -webkit-tap-highlight-color: transparent; }
 .progress { display: flex; gap: 3px; flex: 1 1 140px; max-width: 300px; }
 .progress span { height: 5px; flex: 1; border-radius: 3px; background: var(--line); }
 .progress span.on { background: var(--accent); }
-.card h1 { font-weight: 700; font-size: 1.6rem; line-height: 1.2; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+.card h1 { font-weight: 700; font-size: clamp(1.2rem, 1.05rem + .5vw, 1.6rem); line-height: 1.2; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
 
 .tabs { display: flex; flex-wrap: wrap; gap: 6px; }
 .tab { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 14px; cursor: pointer; font-size: .88rem; font-weight: 500; }
 .tab:hover { border-color: var(--accent); }
 .tab[aria-selected="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 
-.script { font-size: 1.4rem; line-height: 1.55; max-width: 38em; margin: 0; white-space: pre-line; }
+.script { font-size: clamp(1.08rem, .95rem + .55vw, 1.4rem); line-height: 1.55; max-width: 38em; margin: 0; white-space: pre-line; }
 .script .fillin { color: inherit; }
 
 .note {
@@ -249,6 +248,30 @@ details.never summary { cursor: pointer; font-weight: 600; color: var(--stop); }
 details.never ul { margin: 8px 0 0; padding-left: 1.1em; font-size: .88rem; display: grid; gap: 4px; }
 
 .footnote { color: var(--muted); font-size: .82rem; margin-top: 18px; max-width: 75ch; }
+/* Half-screen next to the dialer: narrower side panel, tighter card. */
+@media (max-width: 1100px) {
+  .console { grid-template-columns: minmax(0, 1fr) 270px; gap: 12px; }
+  .card { padding: 18px; gap: 14px; }
+  .obj-list { grid-template-columns: 1fr; }
+}
+/* Small window: one column. Objections become a row of chips above the card
+   so they stay on screen; notes and the rest follow below. */
+@media (max-width: 760px) {
+  body { padding-block: 10px 24px; }
+  .console { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .side { display: contents; }
+  .obj-panel { order: -1; padding: 10px 12px; }
+  .obj-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .obj-btn { flex: none; white-space: nowrap; border-radius: 999px; padding: 7px 12px; font-size: .82rem; }
+  .side > .panel:not(.obj-panel) { order: 1; }
+  .top { padding: 8px 10px; margin-bottom: 10px; gap: 8px; }
+  .mode { padding: 8px 16px; font-size: 1rem; }
+  .top .btn { padding: 8px 16px; font-size: .95rem; }
+  .card { padding: 14px; gap: 12px; }
+  .opt { padding: 10px 12px; gap: 10px; }
+  .hint { display: none; }
+}
+
 </style>
 </head>
 <body>
@@ -265,7 +288,7 @@ details.never ul { margin: 8px 0 0; padding-left: 1.1em; font-size: .88rem; disp
   <section class="panel card" id="card" aria-live="polite"></section>
 
   <aside class="side">
-    <section class="panel" aria-labelledby="objLabel">
+    <section class="panel obj-panel" aria-labelledby="objLabel">
       <div class="label" id="objLabel">Objections</div>
       <div class="obj-list" id="objList"></div>
     </section>
