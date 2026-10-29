@@ -699,7 +699,7 @@ const flow = {
   },
   in_later: {
     title: "Not right now",
-    script: "No problem at all. When works better for 5 to 10 minutes, later today or tomorrow? And what time zone are you in?",
+    script: "No problem at all. When works better for 5 to 10 minutes, later today or tomorrow?",
     note: "Get a specific time. Later today beats tomorrow.",
     options: [
       { label: "Agrees a time", ack: "Perfect, you're locked in.", next: "in_trucks", tone: "go", demo: "later" },
@@ -709,13 +709,12 @@ const flow = {
   },
   in_why: {
     title: "What got them looking",
-    script: "And so our specialist can tailor it to you... what got you looking at Trucker Path? Was it more truck-safe routing, fuel and tolls, keeping track of your drivers, parking, or IFTA?",
+    script: "And what got you looking at Trucker Path? Was it more truck-safe routing, fuel and tolls, keeping track of your drivers, parking, or IFTA?",
     painPick: ["restricted", "fuel", "tolls", "tracking", "parking", "ifta", "insurance", "lastmile"],
     note: "Tap every one they mention. They become the Pain Points, and the last card tells them what the demo will show for each.",
     options: [
       { label: "Done, they named one or more", ack: "Got it, that helps a lot.", next: "in_role", tone: "go", bant: { need: "yes" }, sop: { pain: "yes" } },
       { label: "Just looking around", ack: "Totally fair.", next: "in_role", tone: "warn" },
-      { label: "I'm a driver, just using the app", next: "in_driver_only", tone: "stop" },
     ],
   },
   in_trucks: {
@@ -760,19 +759,22 @@ const flow = {
     title: "TMS provider",
     script: "And for loads and dispatch, are you on a TMS?",
     options: [
-      { label: "McLeod", ack: "Got it.", next: "in_focus", tone: "go", set: { tms: "McLeod" } },
-      { label: "Axon", ack: "Got it.", next: "in_focus", tone: "go", set: { tms: "Axon" } },
-      { label: "AscendTMS", ack: "Got it.", next: "in_focus", tone: "go", set: { tms: "AscendTMS" } },
-      { label: "TruckingOffice", ack: "Got it.", next: "in_focus", tone: "go", set: { tms: "TruckingOffice" } },
-      { label: "Rose Rocket", ack: "Got it.", next: "in_focus", tone: "go", set: { tms: "Rose Rocket" } },
+      { label: "McLeod", ack: "Perfect.", next: "in_focus", tone: "go", set: { tms: "McLeod" } },
+      { label: "Axon", ack: "Perfect.", next: "in_focus", tone: "go", set: { tms: "Axon" } },
+      { label: "AscendTMS", ack: "Perfect.", next: "in_focus", tone: "go", set: { tms: "AscendTMS" } },
+      { label: "TruckingOffice", ack: "Perfect.", next: "in_focus", tone: "go", set: { tms: "TruckingOffice" } },
+      { label: "Rose Rocket", ack: "Perfect.", next: "in_focus", tone: "go", set: { tms: "Rose Rocket" } },
       { label: "Spreadsheets / paper", ack: "Got it, a lot of fleets are.", next: "in_focus", tone: "go", set: { tms: "Spreadsheets / paper" } },
-      { label: "Other", ack: "Got it.", next: "in_focus", tone: "warn", set: { tms: "Other (see rep notes)" }, sub: "Type the name in the notes box." },
+      { label: "Other", ack: "Perfect.", next: "in_focus", tone: "warn", set: { tms: "Other (see rep notes)" }, sub: "Type the name in the notes box." },
       { label: "No TMS", ack: "No worries.", next: "in_focus", tone: "warn", set: { tms: "None" } },
     ],
   },
   in_focus: {
     title: "#1 thing to show",
-    script: "And if the demo could show you one thing, what's the #1 thing you'd want to see?",
+    build: () => chosenPains().length > 1
+      ? "And of everything you mentioned earlier, which one matters most to you? That way the demo starts there."
+      : "And if the demo could show you one thing, what's the #1 thing you'd want to see?",
+    warnings: false,
     options: [
       { label: "Fuel savings", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "Fuel" }, pains: ["fuel"] },
       { label: "Tolls", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "Tolls" }, pains: ["tolls"] },
@@ -1258,6 +1260,12 @@ function qualLeft() { return QUALIFY[state.mode].filter((id) => !state.answered.
 function landOn(id) {
   if (QUALIFY[state.mode].includes(id) && state.answered.includes(id)) {
     id = qualLeft()[0] || (state.mode === "inbound" ? "in_wrap" : "book");
+  }
+  // One pain named already answers "what's the #1 thing", so don't ask it again.
+  if (id === "in_focus" && chosenPains().length === 1) {
+    state.details.focus = PAINS[chosenPains()[0]].label;
+    if (!state.answered.includes(id)) state.answered.push(id);
+    return landOn("in_contact");
   }
   if (id === "in_wrap" && !state.demo) id = "in_book";
   return id;
