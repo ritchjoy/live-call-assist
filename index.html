@@ -265,6 +265,11 @@ details.never ul { margin: 8px 0 0; padding-left: 1.1em; font-size: .88rem; disp
   <section class="panel card" id="card" aria-live="polite"></section>
 
   <aside class="side">
+    <section class="panel" aria-labelledby="objLabel">
+      <div class="label" id="objLabel">Objections</div>
+      <div class="obj-list" id="objList"></div>
+    </section>
+
     <section class="panel notes-panel" aria-labelledby="notesLabel">
       <div class="label" id="notesLabel">Live notes</div>
       <pre class="live" id="liveNotes" aria-live="polite"></pre>
@@ -274,11 +279,6 @@ details.never ul { margin: 8px 0 0; padding-left: 1.1em; font-size: .88rem; disp
         <span class="status" id="copyStatus" role="status"></span>
       </div>
       <textarea id="copyFallback" hidden readonly></textarea>
-    </section>
-
-    <section class="panel" aria-labelledby="objLabel">
-      <div class="label" id="objLabel">Objections</div>
-      <div class="obj-list" id="objList"></div>
     </section>
 
     <section class="panel" aria-labelledby="qualLabel">
