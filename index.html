@@ -89,6 +89,9 @@ button { -webkit-tap-highlight-color: transparent; }
 .top .btn { font-size: 1.05rem; padding: 10px 24px; background: transparent; color: #FFFFFF; border-color: rgba(255, 255, 255, .35); box-shadow: none; }
 .top .btn:hover:not(:disabled) { background: rgba(255, 255, 255, .1); border-color: #FFFFFF; }
 .top .btn.danger { background: var(--stop); border-color: var(--stop); }
+.top .btn.qualify { background: var(--accent); border-color: var(--accent); }
+.top .btn.qualify:hover:not(:disabled) { background: var(--accent-strong); border-color: var(--accent-strong); color: #FFFFFF; }
+.top .btn.qualify:disabled { opacity: .55; }
 
 /* Generic buttons: pill, like the site */
 .btn {
@@ -279,6 +282,7 @@ details.never ul { margin: 8px 0 0; padding-left: 1.1em; font-size: .88rem; disp
 <header class="top">
   <div class="modes" id="modes" role="group" aria-label="Call type"></div>
   <div class="top-right">
+    <button class="btn qualify" id="qualifyBtn" type="button" title="Jump to the qualification questions you haven't asked yet (Q)">Qualify</button>
     <span class="timer" id="timer" title="Call timer">00:00</span>
     <button class="btn" id="newCall" type="button">New call</button>
   </div>
@@ -1135,7 +1139,7 @@ let state, history, timerStart = null, timerId = null;
 
 function freshState(mode = "inbound") {
   return {
-    mode, asked: [], cardId: MODES[mode].main[0], objectionId: null, variant: {}, log: [], persona: null, dq: null, ack: null, size: null, pains: [], details: {},
+    mode, asked: [], answered: [], cardId: MODES[mode].main[0], objectionId: null, variant: {}, log: [], persona: null, dq: null, ack: null, size: null, pains: [], details: {},
     bant: { budget: "unknown", authority: "unknown", need: "unknown", timeline: "unknown" },
     sop: { fleet: "unknown", dm: "unknown", pain: "unknown", timeline: "unknown", budget: "unknown" },
   };
@@ -1239,6 +1243,38 @@ function applyMarks(o) {
   Object.assign(state.sop, o.sop || {});
 }
 
+/* ---------- qualification jump ----------
+   Calls wander. The Qualify button takes the rep to the qualification
+   questions they haven't asked yet, one after another, skipping any already
+   answered, then on to booking. */
+const QUALIFY = {
+  inbound: ["in_trucks", "in_why", "in_role", "in_eld", "in_tms", "in_focus", "in_contact", "in_tz"],
+  outbound: ["fleet", "discovery", "decision", "timeline", "budget"],
+};
+
+function qualLeft() { return QUALIFY[state.mode].filter((id) => !state.answered.includes(id)); }
+
+// Where to land: skip qualification cards already answered, and don't wrap up an inbound demo that isn't booked.
+function landOn(id) {
+  if (QUALIFY[state.mode].includes(id) && state.answered.includes(id)) {
+    id = qualLeft()[0] || (state.mode === "inbound" ? "in_wrap" : "book");
+  }
+  if (id === "in_wrap" && !state.demo) id = "in_book";
+  return id;
+}
+
+function qualify() {
+  const left = qualLeft();
+  if (!left.length || currentCard().end) return;
+  startTimer();
+  snapshot();
+  state.log.push({ card: currentCard().title, choice: "Jumped to qualification" });
+  state.cardId = left[0];
+  state.objectionId = null;
+  state.ack = null;
+  render();
+}
+
 function go(o) {
   startTimer();
   snapshot();
@@ -1246,10 +1282,11 @@ function go(o) {
   applyMarks(o);
   state.ack = o.ack || null;
   const next = routeFor(o.next);
+  if (!state.objectionId && !next.startsWith("obj:") && !state.answered.includes(state.cardId)) state.answered.push(state.cardId);
   if (next === "resume") state.objectionId = null;
-  else if (AFTER_OBJECTION[next]) { state.cardId = afterObjection(next); state.objectionId = null; }
+  else if (AFTER_OBJECTION[next]) { state.cardId = landOn(afterObjection(next)); state.objectionId = null; }
   else if (next.startsWith("obj:")) state.objectionId = next.slice(4);
-  else { state.cardId = next; state.objectionId = null; }
+  else { state.cardId = landOn(next); state.objectionId = null; }
   render();
 }
 
@@ -1296,6 +1333,7 @@ function gateNote() {
 function render() {
   const card = currentCard();
   const el = $("card");
+  renderQualifyBtn(card);
   const isObj = !!state.objectionId;
   el.className = "panel card" + (isObj ? " objection" : "") + (card.end ? " end" : "") + (card.stop ? " stopcard" : "");
 
@@ -1355,7 +1393,7 @@ function render() {
     <div class="options">${optHtml}</div>
     <div class="card-foot">
       <button class="btn" type="button" id="backBtn" ${history.length ? "" : "disabled"}>← Back</button>
-      <span class="hint"><kbd>1</kbd>–<kbd>9</kbd> pick an answer · <kbd>Backspace</kbd> back${isObj ? " · <kbd>Esc</kbd> back to script" : ""}</span>
+      <span class="hint"><kbd>1</kbd>–<kbd>9</kbd> pick an answer · <kbd>Backspace</kbd> back · <kbd>Q</kbd> qualify${isObj ? " · <kbd>Esc</kbd> back to script" : ""}</span>
     </div>`;
 
   el.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => { state.variant[key] = +t.dataset.variant; render(); }));
@@ -1454,6 +1492,15 @@ function newCall(mode = state.mode) {
   render();
 }
 $("newCall").addEventListener("click", () => newCall());
+$("qualifyBtn").addEventListener("click", qualify);
+
+function renderQualifyBtn(card) {
+  const b = $("qualifyBtn"), left = qualLeft().length;
+  const on = !state.objectionId && QUALIFY[state.mode].includes(state.cardId);
+  b.hidden = !left || !!card.end;
+  b.disabled = on;
+  b.textContent = on ? `Qualifying · ${left} left` : `Qualify · ${left} left`;
+}
 
 /* ---------- summary ---------- */
 function summary() {
@@ -1525,6 +1572,8 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault(); back();
   } else if (e.key === "Escape" && state.objectionId) {
     go({ label: "Back to script", next: "resume" });
+  } else if (e.key === "q" || e.key === "Q") {
+    e.preventDefault(); qualify();
   }
 });
 
