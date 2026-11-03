@@ -708,10 +708,16 @@ const flow = {
     ],
   },
   in_why: {
-    title: "What got them looking",
-    script: "And what got you looking at Trucker Path? What's going on in the operation right now?",
+    title: "Uncover the pain",
+    // Each tab is a different way in. "What happened?" works best on inbound: something made them look.
+    variants: [
+      { label: "What happened?", script: "And what made you start looking now? Did something happen recently with the trucks or the drivers?" },
+      { label: "Last time it cost you", script: "And when was the last time something on the road ended up costing you, a wrong turn, a ticket, a late load? What happened?" },
+      { label: "Walk me through", script: "Walk me through your day... when a load comes in, how does the route get to the driver, and where does it usually go sideways?" },
+      { label: "One thing to fix", script: "If you could fix one thing about how your trucks run day to day, what would it be? And why that one?" },
+    ],
     painPick: ["restricted", "fuel", "tolls", "tracking", "parking", "ifta", "insurance", "lastmile"],
-    note: "Ask it open, then stop talking. Don't read the list out: let them name the pain first. Tap what they mention.",
+    note: "Ask one, then stop talking. Let them name the pain; never read the list out. If they say \"just looking\", switch tabs and try another. Tap what they mention.",
     options: [
       { label: "They named something", ack: "Got it.", next: "pain_dig", tone: "go" },
       { label: "Not sure / just looking", ack: "Totally fair.", next: "pain_prompt", tone: "warn" },
