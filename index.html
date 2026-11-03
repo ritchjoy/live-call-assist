@@ -418,7 +418,7 @@ const NEVER_PROMISE = [
 ];
 
 // A cold call sells the next conversation. Keep discovery to what the booking checklist needs; the deep dive is the demo.
-const MAIN_FLOW = ["opener", "reason", "pitch", "fleet", "discovery", "decision", "timeline", "budget", "book", "confirm"];
+const MAIN_FLOW = ["opener", "reason", "pitch", "fleet", "discovery", "pain_dig", "pain_impact", "pain_confirm", "decision", "timeline", "budget", "book", "confirm"];
 
 // Shown on every objection card.
 const OBJECTION_RULE = "Pause. Acknowledge with a ledge line. Ask one question. Don't argue, and don't repeat the rebuttal.";
@@ -473,7 +473,7 @@ const DEMO_LINES = {
 };
 
 // Inbound lead flow (they came to us): sort the lead, book the demo first, qualify after.
-const INBOUND_FLOW = ["in_opener", "in_book", "in_trucks", "in_why", "in_role", "in_eld", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
+const INBOUND_FLOW = ["in_opener", "in_book", "in_trucks", "in_why", "pain_dig", "pain_impact", "pain_confirm", "in_role", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
 const MODES = { inbound: { label: "Inbound lead", main: INBOUND_FLOW }, outbound: { label: "Cold call", main: MAIN_FLOW } };
 
 
@@ -580,7 +580,7 @@ const flow = {
     note: "Ask 2 or 3 that fit, one at a time. Mark only what they confirm. Get a number if you can, like \"$3K a month on tolls\". The next card builds your demo pitch from what you mark.",
     guard: "Don't suggest a problem they didn't raise. If nothing comes up, close politely.",
     options: [
-      { label: "They confirmed a pain", ack: "Really appreciate you walking me through that.", next: "decision", tone: "go", bant: { need: "yes" }, sop: { pain: "yes" } },
+      { label: "They named a pain", ack: "Got it, appreciate you walking me through that.", next: "pain_dig", tone: "go" },
       { label: "Nothing really came up", next: "polite_close", tone: "stop", bant: { need: "no" }, sop: { pain: "no" }, dq: "No Interest" },
       { label: "We already use Samsara / Motive / an ELD", next: "obj:have_provider", tone: "warn" },
     ],
@@ -709,12 +709,62 @@ const flow = {
   },
   in_why: {
     title: "What got them looking",
-    script: "And what got you looking at Trucker Path? Was it more truck-safe routing, fuel and tolls, keeping track of your drivers, parking, or IFTA?",
+    script: "And what got you looking at Trucker Path? What's going on in the operation right now?",
     painPick: ["restricted", "fuel", "tolls", "tracking", "parking", "ifta", "insurance", "lastmile"],
-    note: "Tap every one they mention. They become the Pain Points, and the last card tells them what the demo will show for each.",
+    note: "Ask it open, then stop talking. Don't read the list out: let them name the pain first. Tap what they mention.",
     options: [
-      { label: "Done, they named one or more", ack: "Got it, that helps a lot.", next: "in_role", tone: "go", bant: { need: "yes" }, sop: { pain: "yes" } },
-      { label: "Just looking around", ack: "Totally fair.", next: "in_role", tone: "warn" },
+      { label: "They named something", ack: "Got it.", next: "pain_dig", tone: "go" },
+      { label: "Not sure / just looking", ack: "Totally fair.", next: "pain_prompt", tone: "warn" },
+    ],
+  },
+
+  /* ---------- Pain stage (inbound and cold call) ----------
+     Playbook: let the prospect name the pain, get a real example, put a cost
+     on it, then play it back in their words. "after_pain" goes on to the next
+     qualification question for the call type (see routeFor). */
+  pain_prompt: {
+    title: "Help them find it",
+    script: "Quick one then... how are your drivers getting their routes today? And when was the last time a route, a load or paperwork cost you money?",
+    painPick: ["restricted", "fuel", "tolls", "tracking", "parking", "ifta", "insurance", "lastmile"],
+    note: "Situation questions, not a feature list. Tap anything that comes up.",
+    options: [
+      { label: "Something came up", ack: "Okay, that's helpful.", next: "pain_dig", tone: "go" },
+      { label: "Nothing came up", ack: "No worries, the demo will give you a good look anyway.", next: "after_pain", tone: "warn", sop: { pain: "no" }, skip: ["pain_dig", "pain_impact", "pain_confirm"], sub: "Flag it to the AE: no clear pain yet." },
+    ],
+  },
+  pain_dig: {
+    title: "Get a real example",
+    script: "Tell me a bit more about that... when did it last happen? And how often does it come up?",
+    note: "Get one real story. \"Last week a driver…\" beats \"sometimes.\" No features or pitch yet.",
+    options: [
+      { label: "Gives a real example", ack: "Yeah, I hear that a lot.", next: "pain_impact", tone: "go" },
+      { label: "Stays vague", ack: "Got it.", next: "pain_impact", tone: "warn", sub: "Try once more: \"What did that look like the last time?\"" },
+    ],
+  },
+  pain_impact: {
+    title: "What it costs them",
+    script: "And when that happens, what does it end up costing you? Time on the phone, a ticket, extra miles, a late delivery?",
+    note: "Get a number if you can: \"$300 ticket\", \"2 hours a day calling drivers\", \"50 extra miles a week\". Type it in the notes box.",
+    guard: "Don't put a number in their mouth, and don't promise a saving.",
+    options: [
+      { label: "Money: tickets, fines, repairs", ack: "Ouch, yeah.", next: "pain_confirm", tone: "go", set: { impact: "tickets, fines or repairs" } },
+      { label: "Fuel or extra miles", ack: "Yeah, that adds up.", next: "pain_confirm", tone: "go", set: { impact: "fuel and extra miles" } },
+      { label: "Time: calls, dispatch, admin", ack: "Yeah, that's a lot of time.", next: "pain_confirm", tone: "go", set: { impact: "time on the phone and admin" } },
+      { label: "Late or missed deliveries", ack: "Yeah, that hurts with customers.", next: "pain_confirm", tone: "go", set: { impact: "late or missed deliveries" } },
+      { label: "Driver frustration / turnover", ack: "Yeah, keeping drivers happy is everything.", next: "pain_confirm", tone: "go", set: { impact: "driver frustration" } },
+      { label: "Can't put a number on it", ack: "That's fair.", next: "pain_confirm", tone: "warn", set: { impact: "not quantified yet" } },
+    ],
+  },
+  pain_confirm: {
+    title: "Play it back",
+    build: () => "So just so I've got it right... the big one for you is [their pain, in their words]" +
+      (state.details.impact && state.details.impact !== "not quantified yet" ? ", and it's costing you in " + state.details.impact : "") +
+      ". Did I get that right?",
+    warnings: false,
+    note: "Use their exact words. If they correct you, that's even better: write the correction in the notes.",
+    options: [
+      { label: "Yes, that's it", ack: "Perfect, that's really helpful.", next: "after_pain", tone: "go", bant: { need: "yes" }, sop: { pain: "yes" } },
+      { label: "Corrects you", ack: "Got it, thanks for clarifying.", next: "after_pain", tone: "go", bant: { need: "yes" }, sop: { pain: "yes" }, sub: "Write their version in the notes box." },
     ],
   },
   in_trucks: {
@@ -745,14 +795,27 @@ const flow = {
     script: "And what ELD are you using right now?",
     guard: "Never confirm an ELD integration without checking the integration list.",
     options: [
-      { label: "Samsara", ack: "Got it.", next: "in_tms", tone: "go", set: { eld: "Samsara" } },
-      { label: "Motive", ack: "Got it.", next: "in_tms", tone: "go", set: { eld: "Motive" } },
-      { label: "Geotab", ack: "Got it.", next: "in_tms", tone: "go", set: { eld: "Geotab" } },
-      { label: "Omnitracs", ack: "Got it.", next: "in_tms", tone: "go", set: { eld: "Omnitracs" } },
-      { label: "Platform Science", ack: "Got it.", next: "in_tms", tone: "go", set: { eld: "Platform Science" } },
-      { label: "Garmin", ack: "Got it.", next: "in_tms", tone: "go", set: { eld: "Garmin" } },
-      { label: "Other", ack: "Got it.", next: "in_tms", tone: "warn", set: { eld: "Other (see rep notes)" }, sub: "Type the name in the notes box." },
-      { label: "No ELD / not sure", ack: "No worries.", next: "in_tms", tone: "warn", set: { eld: "None / not sure" } },
+      { label: "Samsara", ack: "Got it.", next: "in_nav", tone: "go", set: { eld: "Samsara" } },
+      { label: "Motive", ack: "Got it.", next: "in_nav", tone: "go", set: { eld: "Motive" } },
+      { label: "Geotab", ack: "Got it.", next: "in_nav", tone: "go", set: { eld: "Geotab" } },
+      { label: "Omnitracs", ack: "Got it.", next: "in_nav", tone: "go", set: { eld: "Omnitracs" } },
+      { label: "Platform Science", ack: "Got it.", next: "in_nav", tone: "go", set: { eld: "Platform Science" } },
+      { label: "Garmin", ack: "Got it.", next: "in_nav", tone: "go", set: { eld: "Garmin" } },
+      { label: "Other", ack: "Got it.", next: "in_nav", tone: "warn", set: { eld: "Other (see rep notes)" }, sub: "Type the name in the notes box." },
+      { label: "No ELD / not sure", ack: "No worries.", next: "in_nav", tone: "warn", set: { eld: "None / not sure" } },
+    ],
+  },
+  in_nav: {
+    title: "Current navigation",
+    script: "And what are your drivers using for navigation right now?",
+    note: "Playbook: know their current nav stack. Respect whatever they use; never knock it.",
+    options: [
+      { label: "Phone / Google Maps", ack: "Got it, a lot of fleets start there.", next: "in_tms", tone: "go", set: { nav: "Phone / Google Maps" } },
+      { label: "Free Trucker Path app", ack: "Oh nice, so the drivers already know us.", next: "in_tms", tone: "go", set: { nav: "Free Trucker Path app" } },
+      { label: "ELD's built-in nav", ack: "Got it.", next: "in_tms", tone: "warn", set: { nav: "ELD's built-in nav" }, sub: "Ask: \"Are you in a contract with them? When does it end?\" Note the date." },
+      { label: "Garmin / truck GPS", ack: "Got it.", next: "in_tms", tone: "go", set: { nav: "Garmin / truck GPS" } },
+      { label: "CoPilot / Rand McNally / other", ack: "Got it.", next: "in_tms", tone: "go", set: { nav: "Other truck nav (see rep notes)" }, sub: "Ask what it's missing for them." },
+      { label: "Each driver uses their own thing", ack: "Got it, that's really common.", next: "in_tms", tone: "go", set: { nav: "Mixed, drivers choose" } },
     ],
   },
   in_tms: {
@@ -1172,6 +1235,7 @@ function afterObjection(kind) {
 
 // Inbound uses its own booking cards; once the demo is booked, don't ask for it again.
 function routeFor(next) {
+  if (next === "after_pain") return state.mode === "inbound" ? "in_role" : "decision";
   if (state.mode !== "inbound" || (next !== "book" && next !== "timeline")) return next;
   if (state.demo) return "continue";
   return next === "book" ? "in_book" : "in_later";
@@ -1240,6 +1304,7 @@ function applyMarks(o) {
   if (o.size) state.size = o.size;
   if (o.demo) state.demo = o.demo;
   if (o.set) Object.assign(state.details, o.set);
+  (o.skip || []).forEach((id) => { if (!state.answered.includes(id)) state.answered.push(id); });
   (o.pains || []).forEach((p) => { if (!state.pains.includes(p)) state.pains.push(p); });
   Object.assign(state.bant, o.bant || {});
   Object.assign(state.sop, o.sop || {});
@@ -1250,8 +1315,8 @@ function applyMarks(o) {
    questions they haven't asked yet, one after another, skipping any already
    answered, then on to booking. */
 const QUALIFY = {
-  inbound: ["in_trucks", "in_why", "in_role", "in_eld", "in_tms", "in_focus", "in_contact", "in_tz"],
-  outbound: ["fleet", "discovery", "decision", "timeline", "budget"],
+  inbound: ["in_trucks", "in_why", "pain_dig", "pain_impact", "pain_confirm", "in_role", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz"],
+  outbound: ["fleet", "discovery", "pain_dig", "pain_impact", "pain_confirm", "decision", "timeline", "budget"],
 };
 
 function qualLeft() { return QUALIFY[state.mode].filter((id) => !state.answered.includes(id)); }
@@ -1524,8 +1589,9 @@ function summary() {
       "DEMO DETAILS",
       "ELD Provider: " + (d.eld || ""),
       "TMS Provider: " + (d.tms || ""),
+      "Current Navigation: " + (d.nav || ""),
       "Number of Trucks: " + (SIZE_LABEL[state.size] || ""),
-      "Pain Points: " + [pains, d.focus ? "#1: " + d.focus : ""].filter(Boolean).join(" | "),
+      "Pain Points: " + [pains, d.focus ? "#1: " + d.focus : "", d.impact ? "Impact: " + d.impact : ""].filter(Boolean).join(" | "),
       "Contact Person: " + (d.contact || ""),
       "Position: " + role,
       "Demo Schedule (US Time): " + [state.demo === "now" ? "Now (live demo)" : state.demo === "later" ? "Later (see rep notes)" : "", d.tz].filter(Boolean).join(", "),
@@ -1540,6 +1606,7 @@ function summary() {
     if (role) lines.push("Role: " + role);
     if (state.size) lines.push("Fleet: " + SIZE_LABEL[state.size]);
     if (pains) lines.push("Pains: " + pains);
+    if (d.impact) lines.push("Impact: " + d.impact);
   }
   if (state.log.length) {
     lines.push("Qualification: BANT " + bantYes + " of 4, booking checklist " + sopYes + " of 5");
