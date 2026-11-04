@@ -707,7 +707,8 @@ const flow = {
     note: "Keep it short. The demo does the selling. Offer two times, not a yes/no.",
     options: [
       { label: "Now works", ack: "Awesome. So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute.", next: "in_why", tone: "go", demo: "now" },
-      { label: "Later today or tomorrow", next: "in_later", tone: "go" },
+      { label: "Picks a time later today or tomorrow", ack: "Perfect, you're locked in. So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute.", next: "in_why", tone: "go", demo: "later", sub: "Type the time in the notes box." },
+      { label: "Later, but no time yet", next: "in_later", tone: "warn" },
       { label: "Send me info first", next: "obj:send_email", tone: "warn" },
       { label: "Need to check with the owner", next: "obj:need_owner", tone: "warn" },
       { label: "How much is it?", next: "obj:price", tone: "warn" },
