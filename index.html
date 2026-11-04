@@ -582,7 +582,7 @@ const flow = {
   discovery: {
     title: "Find their pain",
     discovery: true,
-    script: "",
+    script: "Let me ask you a couple of quick ones, so I understand how things run on your side.",
     note: "Ask 2 or 3 that fit, one at a time. Mark only what they confirm. Get a number if you can, like \"$3K a month on tolls\". The next card builds your demo pitch from what you mark.",
     guard: "Don't suggest a problem they didn't raise. If nothing comes up, close politely.",
     options: [
@@ -621,7 +621,7 @@ const flow = {
       { label: "Yes, open to it", ack: "Appreciate you being open about that.", next: "book", tone: "go", bant: { budget: "yes" }, sop: { budget: "yes" } },
       { label: "Need to see the value first", ack: "Totally fair.", next: "book", tone: "warn", bant: { budget: "unknown" }, sop: { budget: "unknown" } },
       { label: "How much is it?", next: "obj:price", tone: "warn" },
-      { label: "No budget at all", ack: "Appreciate you being straight with me.", next: "book", tone: "stop", bant: { budget: "no" }, sop: { budget: "no" } },
+      { label: "No budget at all", next: "obj:price_2", tone: "warn" },
     ],
   },
   book: {
@@ -633,7 +633,7 @@ const flow = {
       { label: "Picks a slot", ack: "Perfect.", next: "confirm", tone: "go" },
       { label: "Send me info first", next: "obj:send_email", tone: "warn" },
       { label: "Need to check with the owner", next: "obj:need_owner", tone: "warn" },
-      { label: "Not now", next: "polite_close", tone: "stop", dq: "Bad Timing" },
+      { label: "Not now", next: "callback", tone: "warn" },
     ],
   },
   confirm: {
@@ -676,19 +676,26 @@ const flow = {
   },
   in_loads: {
     title: "Looking for loads",
-    script: "Got it, that's our Truckloads load board. Just so I point you to the right person... are you running just your own truck, or do you have other trucks and drivers too?",
-    note: "Don't disqualify a load board lead. One truck goes to the Truckloads team; two or more can still be a fleet demo.",
+    script: "Got it, that's our Truckloads load board. Just so I point you to the right person... how many trucks are you running?",
+    note: "Don't disqualify a load board lead. 1–2 trucks goes to the Jr. AE team (Truckloads Bundle); 3 or more can still be a fleet demo.",
     options: [
-      { label: "Just their own truck", next: "in_loads_end", tone: "warn", size: "1-2" },
-      { label: "2 or more trucks", ack: "Oh nice. Then the fleet side is worth a look too.", next: "in_book", tone: "go" },
+      { label: "1–2 trucks", next: "in_loads_end", tone: "warn", size: "1-2" },
+      { label: "3 or more trucks", ack: "Oh nice. Then the fleet side is worth a look too.", next: "in_book", tone: "go" },
       { label: "Company driver, doesn't run trucks", next: "in_driver_only", tone: "stop" },
     ],
   },
+  in_owner_op_end: {
+    title: "Handed to owner-operator team",
+    end: true,
+    script: "Got it, thanks. With one or two trucks, our owner-operator plans are actually a better fit than the fleet demo, so I'll have my colleague who looks after those reach out to you today. Thanks so much, [first name]!",
+    note: "Playbook: 1–2 trucks goes to the Jr. AE team (Diamond plan or Truckloads Bundle). Reassign the lead and cancel the fleet demo invite if one went out. Don't disqualify it.",
+    guard: "Only say a colleague will reach out if you reassign the lead today.",
+  },
   in_loads_end: {
-    title: "Handed to Truckloads",
+    title: "Handed to Truckloads / owner-operator team",
     end: true,
     script: "Perfect. I'll have my colleague who looks after Truckloads reach out to help you get the most out of the load board. Thanks so much, [first name]!",
-    note: "Reassign the lead to the Truckloads team and note they're looking for loads. Don't disqualify it.",
+    note: "Reassign the lead to the Jr. AE team and note they're looking for loads (Truckloads Bundle). Don't disqualify it.",
     guard: "Only say a colleague will reach out if you reassign the lead today.",
   },
   in_book: {
@@ -706,7 +713,7 @@ const flow = {
   },
   in_later: {
     title: "Not right now",
-    script: "No problem at all. When works better for 5 to 10 minutes, later today or tomorrow?",
+    script: "No problem at all. What time works best for 5 to 10 minutes, later today or tomorrow? I'll lock it in.",
     note: "Get a specific time. Later today beats tomorrow.",
     options: [
       { label: "Agrees a time", ack: "Perfect, you're locked in.", next: "in_trucks", tone: "go", demo: "later" },
@@ -797,7 +804,7 @@ const flow = {
     title: "Number of trucks",
     script: "So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute. First, how many trucks are you running right now?",
     options: [
-      { label: "1–2 trucks", ack: "Got it.", next: "in_why", tone: "warn", sop: { fleet: "no" }, size: "1-2", sub: "Under the 3-truck minimum. Keep the demo, but flag it to your manager." },
+      { label: "1–2 trucks", next: "in_owner_op_end", tone: "warn", sop: { fleet: "no" }, size: "1-2", sub: "Owner-operator: hand to the Jr. AE team, no fleet demo." },
       { label: "3–10 trucks", ack: "Okay, perfect.", next: "in_why", tone: "go", sop: { fleet: "yes" }, size: "3-10" },
       { label: "11–50 trucks", ack: "Okay, perfect.", next: "in_why", tone: "go", sop: { fleet: "yes" }, size: "11-50" },
       { label: "50+ trucks", ack: "Oh nice, that's a solid operation.", next: "in_why", tone: "go", sop: { fleet: "yes" }, size: "50+" },
@@ -1163,8 +1170,12 @@ const objections = {
   },
   how_number: {
     title: "How did you get my number?",
-    script: "Fair question. I don't want to guess, so I'll check our records and let you know. And if you'd rather I didn't call again, just say and I'll make sure of it.",
-    note: "If you have a verified source, say it. Otherwise don't guess.",
+    // Inbound leads gave us their number; cold leads came from a list, so don't guess.
+    build: () => state.mode === "inbound"
+      ? "Fair question. You'd checked out Trucker Path recently, on our app or website, and your number came through with that. And if you'd rather I didn't call again, just say and I'll make sure of it."
+      : "Fair question. I don't want to guess, so I'll check our records and let you know. And if you'd rather I didn't call again, just say and I'll make sure of it.",
+    warnings: false,
+    note: "Cold call: if you have a verified source, say it. Otherwise don't guess.",
     options: [
       { label: "Okay, go on", ack: "Thanks, appreciate that.", next: "continue", tone: "go" },
       { label: "Stop contacting me", next: "end_dnc", tone: "stop" },
@@ -1292,8 +1303,8 @@ function valuePitch() {
   if (lines.length) lines[0] = lines[0].replace(/^And (\w)/, (_, c) => c.toUpperCase());
   const body = lines.length
     ? lines.join("\n\n")
-    : "From what you've shared, the big win is getting your drivers on routes built for the truck, and seeing where everyone is without picking up the phone.";
-  return "So based on what you told me...\n\n" + body +
+    : "For a fleet like yours, the big win is usually getting your drivers on routes built for the truck, and seeing where everyone is without picking up the phone.";
+  return (lines.length ? "So based on what you told me...\n\n" : "") + body +
     "\n\nHonestly, the easiest way to see it is a free 30-minute demo with one of our specialists, using your own trucks and routes. Would [day] at [time] or [day] at [time] work better, and what time zone are you in?";
 }
 
