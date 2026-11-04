@@ -161,6 +161,12 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 .pain:hover { border-color: var(--accent); box-shadow: var(--shadow-hover); }
 .pain .pq { font-size: 1.05rem; }
+.pain .more { font-size: .92rem; color: var(--muted); }
+/* Follow-up questions under the script */
+.asks { background: var(--bg); border-radius: 10px; padding: 10px 14px; }
+.asks b { display: block; font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; margin: 6px 0 4px; }
+.asks b:first-child { margin-top: 0; }
+.asks ul { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; font-size: 1.02rem; }
 .pain .pl { font-size: .8rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .pain[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
 .pain[aria-pressed="true"]::before {
@@ -426,23 +432,23 @@ const OBJECTION_RULE = "Pause. Acknowledge with a ledge line. Ask one question. 
 // Discovery: each pain has the question that brings it out, and the value line used in the demo pitch
 // when the lead confirms it. business: true = Business tier only.
 const PAINS = {
-  fuel:       { label: "Fuel", q: "What did fuel cost you last month? And who chooses where drivers fuel?",
+  fuel:       { label: "Fuel", qs: ["How do your drivers decide where to fuel?", "What's fuel running you a month, roughly?", "How do you make sure drivers use the stations where you get a discount?"],
                 pitch: "You mentioned fuel... NavPro builds a fuel plan right into the driver's app, and dispatch can show only your approved fuel stops, so drivers aren't buying wherever.", business: true },
-  tolls:      { label: "Tolls", q: "And tolls, roughly what are those running you a month?",
+  tolls:      { label: "Tolls", qs: ["How do you plan around tolls today?", "What are tolls costing you in a typical month?"],
                 pitch: "On tolls... you can compare routes and set areas to avoid, so drivers aren't defaulting to toll roads. One of our customers, Keller Trucking, says their tolls went from about $84K to about $40K in a month." },
-  restricted: { label: "Bridges / restricted roads / tickets", q: "In the past year, any bridge strikes, restricted-road tickets, or a driver ending up somewhere the truck shouldn't be?",
+  restricted: { label: "Bridges / restricted roads / tickets", qs: ["How do your drivers know which roads are truck-legal?", "Tell me about the last time a driver ended up on a road they shouldn't have been on.", "What happens when a driver gets a ticket for a restricted route?"],
                 pitch: "On the bridge and restricted-road side... every route is built around the truck's height, weight, length and axles, and you can block low bridges and restricted corridors." },
-  insurance:  { label: "Insurance / CSA", q: "How are insurance premiums and CSA scores looking this year?",
+  insurance:  { label: "Insurance / CSA", qs: ["How are your insurance premiums and CSA scores looking this year?", "What's driving those up, if anything?"],
                 pitch: "On insurance and CSA... you get truck-safe routes plus live weather, traffic and hazard alerts, and driver performance reports, so you can coach before it turns into a violation.", business: true },
-  parking:    { label: "Parking", q: "How do your drivers find parking at night?",
+  parking:    { label: "Parking", qs: ["How do your drivers find parking at night?", "What happens when they run out of hours and there's no spot?"],
                 pitch: "On parking... your drivers see parking availability, truck stops and weigh station status along the route, from the same network over a million drivers use every month." },
-  lastmile:   { label: "Lost at shipper / receiver", q: "Do drivers ever get turned around at the shipper or receiver, looking for the right gate?",
+  lastmile:   { label: "Lost at shipper / receiver", qs: ["How often do drivers get turned around looking for the right gate or dock?", "What does that cost you in time or detention?"],
                 pitch: "At the shipper and receiver... drivers get directions right to the dock, and you can save your own locations, so fewer \"where's the gate?\" calls." },
-  tracking:   { label: "Calling drivers for location / ETA", q: "How do you know where a driver is and when they'll arrive? How many calls a day does that take?",
+  tracking:   { label: "Calling drivers for location / ETA", qs: ["How do you find out where a driver is and when they'll arrive?", "How many calls a day does dispatch make just to check on drivers?", "What happens when a customer asks for an ETA and you don't have one?"],
                 pitch: "And instead of calling drivers all day... you see every truck on a live map with ETAs." },
-  ifta:       { label: "IFTA", q: "How do you handle IFTA today?",
+  ifta:       { label: "IFTA", qs: ["How do you handle IFTA reporting today?", "How much time does that take you each quarter?"],
                 pitch: "And IFTA... mileage gets tracked automatically, so it's not a month-end scramble.", business: true },
-  eld:        { label: "Uses an ELD / TMS", q: "What ELD and TMS are you using?",
+  eld:        { label: "Current setup and contracts", qs: ["What are your drivers using for navigation right now, and what do you like or not like about it?", "What's that missing for your operation?", "When does your current contract come up for renewal?"],
                 pitch: "And it works alongside your ELD... it connects with over 30 of them, so you're not replacing anything." },
 };
 
@@ -709,12 +715,12 @@ const flow = {
   },
   in_why: {
     title: "Uncover the pain",
-    // Each tab is a different way in. "What happened?" works best on inbound: something made them look.
+    // The team's opening questions. Each tab is a different way in.
     variants: [
-      { label: "What happened?", script: "And what made you start looking now? Did something happen recently with the trucks or the drivers?" },
-      { label: "Last time it cost you", script: "And when was the last time something on the road ended up costing you, a wrong turn, a ticket, a late load? What happened?" },
-      { label: "Walk me through", script: "Walk me through your day... when a load comes in, how does the route get to the driver, and where does it usually go sideways?" },
-      { label: "One thing to fix", script: "If you could fix one thing about how your trucks run day to day, what would it be? And why that one?" },
+      { label: "Why now?", script: "And what made you start looking at a truck navigation tool?" },
+      { label: "Biggest headache", script: "What's the biggest headache running your trucks day to day right now?" },
+      { label: "One thing to fix", script: "If you could fix one thing about how your trucks run, what would it be?" },
+      { label: "Walk me through", script: "Walk me through how a load goes, from dispatch to delivery." },
     ],
     painPick: ["restricted", "fuel", "tolls", "tracking", "parking", "ifta", "insurance", "lastmile"],
     note: "Ask one, then stop talking. Let them name the pain; never read the list out. If they say \"just looking\", switch tabs and try another. Tap what they mention.",
@@ -730,9 +736,11 @@ const flow = {
      qualification question for the call type (see routeFor). */
   pain_prompt: {
     title: "Help them find it",
-    script: "Quick one then... how are your drivers getting their routes today? And when was the last time a route, a load or paperwork cost you money?",
+    script: "Walk me through how a load goes for you, from dispatch to delivery.",
+    // One easy question per area. Ask two or three that fit, not all of them.
+    asks: [["Then probe an area", ["fuel", "restricted", "tracking", "parking", "tolls", "ifta", "insurance", "lastmile"].map((k) => PAINS[k].qs[0])]],
     painPick: ["restricted", "fuel", "tolls", "tracking", "parking", "ifta", "insurance", "lastmile"],
-    note: "Situation questions, not a feature list. Tap anything that comes up.",
+    note: "Pick two or three questions that fit what they just told you. Situation questions, not a feature list. Tap anything that comes up.",
     options: [
       { label: "Something came up", ack: "Okay, that's helpful.", next: "pain_dig", tone: "go" },
       { label: "Nothing came up", ack: "No worries, the demo will give you a good look anyway.", next: "after_pain", tone: "warn", sop: { pain: "no" }, skip: ["pain_dig", "pain_impact", "pain_confirm"], sub: "Flag it to the AE: no clear pain yet." },
@@ -740,8 +748,13 @@ const flow = {
   },
   pain_dig: {
     title: "Get a real example",
-    script: "Tell me a bit more about that... when did it last happen? And how often does it come up?",
-    note: "Get one real story. \"Last week a driver…\" beats \"sometimes.\" No features or pitch yet.",
+    script: "Tell me more about that. How often does that happen?",
+    // Questions for each pain they tapped; if none tapped, the general ones only.
+    asks: () => [
+      ...chosenPains().map((k) => [PAINS[k].label, PAINS[k].qs]),
+      ["Then", ["How are you handling it today?"]],
+    ],
+    note: "Get one real story. \"Last week a driver…\" beats \"sometimes.\" Use the questions for what they named. No features or pitch yet.",
     options: [
       { label: "Gives a real example", ack: "Yeah, I hear that a lot.", next: "pain_impact", tone: "go" },
       { label: "Stays vague", ack: "Got it.", next: "pain_impact", tone: "warn", sub: "Try once more: \"What did that look like the last time?\"" },
@@ -749,7 +762,8 @@ const flow = {
   },
   pain_impact: {
     title: "What it costs them",
-    script: "And when that happens, what does it end up costing you? Time on the phone, a ticket, extra miles, a late delivery?",
+    script: "What does that cost you, in money or time?",
+    asks: [["Then", ["What happens if it doesn't get fixed?", "Who else feels that problem: dispatch, safety, the drivers?"]]],
     note: "Get a number if you can: \"$300 ticket\", \"2 hours a day calling drivers\", \"50 extra miles a week\". Type it in the notes box.",
     guard: "Don't put a number in their mouth, and don't promise a saving.",
     options: [
@@ -813,8 +827,9 @@ const flow = {
   },
   in_nav: {
     title: "Current navigation",
-    script: "And what are your drivers using for navigation right now?",
-    note: "Playbook: know their current nav stack. Respect whatever they use; never knock it.",
+    script: "And what are your drivers using for navigation right now, and what do you like or not like about it?",
+    asks: [["Then", ["What's that missing for your operation?", "When does your current contract come up for renewal?"]]],
+    note: "Know their current setup and contract date. Respect whatever they use; never knock it. Note the renewal date if they have one.",
     options: [
       { label: "Phone / Google Maps", ack: "Got it, a lot of fleets start there.", next: "in_tms", tone: "go", set: { nav: "Phone / Google Maps" } },
       { label: "Free Trucker Path app", ack: "Oh nice, so the drivers already know us.", next: "in_tms", tone: "go", set: { nav: "Free Trucker Path app" } },
@@ -1409,6 +1424,12 @@ function gateNote() {
   return `<div class="note gate"><b>Before booking</b><span>${esc(bits.join(" "))} Resolve these rather than assuming them.</span></div>`;
 }
 
+function asksHtml(card) {
+  const groups = typeof card.asks === "function" ? card.asks() : card.asks;
+  if (!groups || !groups.length) return "";
+  return `<div class="asks">${groups.map(([h, qs]) => `<b>${esc(h)}</b><ul>${qs.map((q) => `<li>${fill(q)}</li>`).join("")}</ul>`).join("")}</div>`;
+}
+
 function render() {
   const card = currentCard();
   const el = $("card");
@@ -1433,7 +1454,7 @@ function render() {
   const painList = card.discovery || card.painPick
     ? `<div class="pains">${(card.painPick || painOrder()).map((k) => {
         const on = state.pains.includes(k);
-        return `<button class="pain" type="button" aria-pressed="${on}" data-pain="${k}"><span class="pq">${esc(card.painPick ? PAINS[k].label : PAINS[k].q)}</span><span class="pl">${on ? "Mentioned" : card.painPick ? "" : esc(PAINS[k].label)}</span></button>`;
+        return `<button class="pain" type="button" aria-pressed="${on}" data-pain="${k}"><span class="pq">${card.painPick ? esc(PAINS[k].label) : esc(PAINS[k].qs[0]) + PAINS[k].qs.slice(1).map((q) => `<br><span class="more">${esc(q)}</span>`).join("")}</span><span class="pl">${on ? "Mentioned" : card.painPick ? "" : esc(PAINS[k].label)}</span></button>`;
       }).join("")}</div>`
     : "";
   const checklist = card.checklist
@@ -1462,6 +1483,7 @@ function render() {
     <h1>${esc(card.title)}</h1>
     ${tabs}
     ${script ? `<p class="script">${state.ack ? `<span class="ack" title="Acknowledge their answer first">${fill(state.ack)}</span> ` : ""}${fill(script)}</p>` : ""}
+    ${asksHtml(card)}
     ${isObj ? `<div class="note gate"><b>Rule</b><span>${esc(OBJECTION_RULE)}</span></div>` : ""}
     ${card.crm ? `<div class="note gate ok"><b>HubSpot</b><span>${esc(crmText(card))}</span></div>` : ""}
     ${card.note ? `<div class="note"><b>${card.end ? "Next" : "Coach"}</b><span>${esc(card.note)}</span></div>` : ""}
