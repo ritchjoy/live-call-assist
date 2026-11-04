@@ -478,8 +478,8 @@ const DEMO_LINES = {
   eld: "how it would connect with the ELD you already use",
 };
 
-// Inbound lead flow (they came to us): sort the lead, book the demo first, qualify after.
-const INBOUND_FLOW = ["in_opener", "in_book", "in_trucks", "in_why", "pain_dig", "pain_impact", "pain_confirm", "in_role", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
+// Inbound lead flow (they came to us): their priority, truck count (decides fleet vs owner-operator), book the demo, then qualify.
+const INBOUND_FLOW = ["in_opener", "in_trucks", "in_book", "in_why", "pain_dig", "pain_impact", "pain_confirm", "in_role", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
 const MODES = { inbound: { label: "Inbound lead", main: INBOUND_FLOW }, outbound: { label: "Cold call", main: MAIN_FLOW } };
 
 
@@ -650,10 +650,10 @@ const flow = {
     note: "Call fast; inbound leads go cold within hours. Options 1–4 answer your question; their pick is the first sign of their need. Load boards only come up if they raise it (option 5).",
     guard: "They came to us. Don't ask permission to talk, and never open with \"Did I catch you at a bad time?\"",
     options: [
-      { label: "Tracking trucks and drivers", ack: "Got it, that's a big one.", next: "in_book", tone: "go", pains: ["tracking"], set: { interest: "tracking" } },
-      { label: "Safe routes, fuel and tolls", ack: "Got it, that's a big one.", next: "in_book", tone: "go", pains: ["restricted", "fuel", "tolls"], set: { interest: "routes" } },
-      { label: "Both", ack: "Got it, love that.", next: "in_book", tone: "go", pains: ["tracking", "restricted", "fuel", "tolls"], set: { interest: "both" } },
-      { label: "Not sure / just looking", ack: "Totally fair.", next: "in_book", tone: "warn" },
+      { label: "Tracking trucks and drivers", ack: "Got it, that's a big one.", next: "in_trucks", tone: "go", pains: ["tracking"], set: { interest: "tracking" } },
+      { label: "Safe routes, fuel and tolls", ack: "Got it, that's a big one.", next: "in_trucks", tone: "go", pains: ["restricted", "fuel", "tolls"], set: { interest: "routes" } },
+      { label: "Both", ack: "Got it, love that.", next: "in_trucks", tone: "go", pains: ["tracking", "restricted", "fuel", "tolls"], set: { interest: "both" } },
+      { label: "Not sure / just looking", ack: "Totally fair.", next: "in_trucks", tone: "warn" },
       { label: "They bring up loads / load board", next: "in_loads", tone: "warn", sub: "Goes to the Truckloads check." },
       { label: "Doesn't remember signing up", next: "in_remind", tone: "warn" },
       { label: "What's this about?", ack: "Sure.", next: "in_book", tone: "warn" },
@@ -665,9 +665,9 @@ const flow = {
     title: "Remind them",
     script: "No worries at all. You'd checked out Trucker Path recently, on the app or our website. What's the bigger priority for you right now... keeping track of your trucks and drivers, or getting them on truck-safe routes that save on fuel and tolls?",
     options: [
-      { label: "Tracking trucks and drivers", ack: "Got it, that's a big one.", next: "in_book", tone: "go", pains: ["tracking"], set: { interest: "tracking" } },
-      { label: "Safe routes, fuel and tolls", ack: "Got it, that's a big one.", next: "in_book", tone: "go", pains: ["restricted", "fuel", "tolls"], set: { interest: "routes" } },
-      { label: "Both", ack: "Got it, love that.", next: "in_book", tone: "go", pains: ["tracking", "restricted", "fuel", "tolls"], set: { interest: "both" } },
+      { label: "Tracking trucks and drivers", ack: "Got it, that's a big one.", next: "in_trucks", tone: "go", pains: ["tracking"], set: { interest: "tracking" } },
+      { label: "Safe routes, fuel and tolls", ack: "Got it, that's a big one.", next: "in_trucks", tone: "go", pains: ["restricted", "fuel", "tolls"], set: { interest: "routes" } },
+      { label: "Both", ack: "Got it, love that.", next: "in_trucks", tone: "go", pains: ["tracking", "restricted", "fuel", "tolls"], set: { interest: "both" } },
       { label: "They bring up loads / load board", next: "in_loads", tone: "warn" },
       { label: "What's this about?", ack: "Sure.", next: "in_book", tone: "warn" },
       { label: "Not interested", next: "obj:not_interested", tone: "warn" },
@@ -680,14 +680,17 @@ const flow = {
     note: "Don't disqualify a load board lead. 1–2 trucks goes to the Jr. AE team (Truckloads Bundle); 3 or more can still be a fleet demo.",
     options: [
       { label: "1–2 trucks", next: "in_loads_end", tone: "warn", size: "1-2" },
-      { label: "3 or more trucks", ack: "Oh nice. Then the fleet side is worth a look too.", next: "in_book", tone: "go" },
+      { label: "3–10 trucks", ack: "Oh nice. Then the fleet side is worth a look too.", next: "in_book", tone: "go", sop: { fleet: "yes" }, size: "3-10", skip: ["in_trucks"] },
+      { label: "11–50 trucks", ack: "Oh nice. Then the fleet side is worth a look too.", next: "in_book", tone: "go", sop: { fleet: "yes" }, size: "11-50", skip: ["in_trucks"] },
+      { label: "50+ trucks", ack: "Oh nice, that's a solid operation. Then the fleet side is worth a look too.", next: "in_book", tone: "go", sop: { fleet: "yes" }, size: "50+", skip: ["in_trucks"] },
       { label: "Company driver, doesn't run trucks", next: "in_driver_only", tone: "stop" },
     ],
   },
   in_owner_op_end: {
     title: "Handed to owner-operator team",
     end: true,
-    script: "Got it, thanks. With one or two trucks, our owner-operator plans are actually a better fit than the fleet demo, so I'll have my colleague who looks after those reach out to you today. Thanks so much, [first name]!",
+    build: () => "Got it, thanks. With one or two trucks, our owner-operator plans are actually " + (state.demo ? "a better fit than the fleet demo" : "the better fit for you") + ", so I'll have my colleague who looks after those reach out to you today. Thanks so much, [first name]!",
+    warnings: false,
     note: "Playbook: 1–2 trucks goes to the Jr. AE team (Diamond plan or Truckloads Bundle). Reassign the lead and cancel the fleet demo invite if one went out. Don't disqualify it.",
     guard: "Only say a colleague will reach out if you reassign the lead today.",
   },
@@ -703,7 +706,7 @@ const flow = {
     build: () => inboundPitch(),
     note: "Keep it short. The demo does the selling. Offer two times, not a yes/no.",
     options: [
-      { label: "Now works", ack: "Awesome.", next: "in_trucks", tone: "go", demo: "now" },
+      { label: "Now works", ack: "Awesome. So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute.", next: "in_why", tone: "go", demo: "now" },
       { label: "Later today or tomorrow", next: "in_later", tone: "go" },
       { label: "Send me info first", next: "obj:send_email", tone: "warn" },
       { label: "Need to check with the owner", next: "obj:need_owner", tone: "warn" },
@@ -716,7 +719,7 @@ const flow = {
     script: "No problem at all. What time works best for 5 to 10 minutes, later today or tomorrow? I'll lock it in.",
     note: "Get a specific time. Later today beats tomorrow.",
     options: [
-      { label: "Agrees a time", ack: "Perfect, you're locked in.", next: "in_trucks", tone: "go", demo: "later" },
+      { label: "Agrees a time", ack: "Perfect, you're locked in. So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute.", next: "in_why", tone: "go", demo: "later" },
       { label: "Send me info first", next: "obj:send_email", tone: "warn" },
       { label: "Not interested", next: "obj:not_interested", tone: "warn" },
     ],
@@ -802,13 +805,15 @@ const flow = {
   },
   in_trucks: {
     title: "Number of trucks",
-    script: "So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute. First, how many trucks are you running right now?",
+    // Asked before booking: the truck count decides fleet demo vs the owner-operator team.
+    build: () => state.demo ? "First, how many trucks are you running right now?" : "And just so I point you to the right person... how many trucks are you running right now?",
+    warnings: false,
     options: [
       { label: "1–2 trucks", next: "in_owner_op_end", tone: "warn", sop: { fleet: "no" }, size: "1-2", sub: "Owner-operator: hand to the Jr. AE team, no fleet demo." },
-      { label: "3–10 trucks", ack: "Okay, perfect.", next: "in_why", tone: "go", sop: { fleet: "yes" }, size: "3-10" },
-      { label: "11–50 trucks", ack: "Okay, perfect.", next: "in_why", tone: "go", sop: { fleet: "yes" }, size: "11-50" },
-      { label: "50+ trucks", ack: "Oh nice, that's a solid operation.", next: "in_why", tone: "go", sop: { fleet: "yes" }, size: "50+" },
-      { label: "Rather not say", ack: "No worries at all.", next: "in_why", tone: "warn", sop: { fleet: "unknown" } },
+      { label: "3–10 trucks", ack: "Okay, perfect.", next: "after_trucks", tone: "go", sop: { fleet: "yes" }, size: "3-10" },
+      { label: "11–50 trucks", ack: "Okay, perfect.", next: "after_trucks", tone: "go", sop: { fleet: "yes" }, size: "11-50" },
+      { label: "50+ trucks", ack: "Oh nice, that's a solid operation.", next: "after_trucks", tone: "go", sop: { fleet: "yes" }, size: "50+" },
+      { label: "Rather not say", ack: "No worries at all.", next: "after_trucks", tone: "warn", sop: { fleet: "unknown" } },
     ],
   },
   in_role: {
@@ -1274,6 +1279,7 @@ function afterObjection(kind) {
 // Inbound uses its own booking cards; once the demo is booked, don't ask for it again.
 function routeFor(next) {
   if (next === "after_pain") return state.mode === "inbound" ? "in_role" : "decision";
+  if (next === "after_trucks") return state.demo ? "in_why" : "in_book";
   if (state.mode !== "inbound" || (next !== "book" && next !== "timeline")) return next;
   if (state.demo) return "continue";
   return next === "book" ? "in_book" : "in_later";
@@ -1371,6 +1377,8 @@ function qualLeft() { return QUALIFY[state.mode].filter((id) => !state.answered.
 
 // Where to land: skip qualification cards already answered, and don't wrap up an inbound demo that isn't booked.
 function landOn(id) {
+  // Booked before the truck count came up (e.g. "What's this about?"): ask it now.
+  if (id === "in_why" && !state.answered.includes("in_trucks")) id = "in_trucks";
   if (QUALIFY[state.mode].includes(id) && state.answered.includes(id)) {
     id = qualLeft()[0] || (state.mode === "inbound" ? "in_wrap" : "book");
   }
