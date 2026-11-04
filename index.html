@@ -650,9 +650,9 @@ const flow = {
     note: "Call fast; inbound leads go cold within hours. Options 1–4 answer your question; their pick is the first sign of their need. Load boards only come up if they raise it (option 5).",
     guard: "They came to us. Don't ask permission to talk, and never open with \"Did I catch you at a bad time?\"",
     options: [
-      { label: "Tracking trucks and drivers", ack: "Got it, that's a big one.", next: "in_book", tone: "go", pains: ["tracking"] },
-      { label: "Safe routes, fuel and tolls", ack: "Got it, that's a big one.", next: "in_book", tone: "go", pains: ["restricted", "fuel", "tolls"] },
-      { label: "Both", ack: "Got it, love that.", next: "in_book", tone: "go", pains: ["tracking", "restricted", "fuel", "tolls"] },
+      { label: "Tracking trucks and drivers", ack: "Got it, that's a big one.", next: "in_book", tone: "go", pains: ["tracking"], set: { interest: "tracking" } },
+      { label: "Safe routes, fuel and tolls", ack: "Got it, that's a big one.", next: "in_book", tone: "go", pains: ["restricted", "fuel", "tolls"], set: { interest: "routes" } },
+      { label: "Both", ack: "Got it, love that.", next: "in_book", tone: "go", pains: ["tracking", "restricted", "fuel", "tolls"], set: { interest: "both" } },
       { label: "Not sure / just looking", ack: "Totally fair.", next: "in_book", tone: "warn" },
       { label: "They bring up loads / load board", next: "in_loads", tone: "warn", sub: "Goes to the Truckloads check." },
       { label: "Doesn't remember signing up", next: "in_remind", tone: "warn" },
@@ -665,9 +665,9 @@ const flow = {
     title: "Remind them",
     script: "No worries at all. You'd checked out Trucker Path recently, on the app or our website. What's the bigger priority for you right now... keeping track of your trucks and drivers, or getting them on truck-safe routes that save on fuel and tolls?",
     options: [
-      { label: "Tracking trucks and drivers", ack: "Got it, that's a big one.", next: "in_book", tone: "go", pains: ["tracking"] },
-      { label: "Safe routes, fuel and tolls", ack: "Got it, that's a big one.", next: "in_book", tone: "go", pains: ["restricted", "fuel", "tolls"] },
-      { label: "Both", ack: "Got it, love that.", next: "in_book", tone: "go", pains: ["tracking", "restricted", "fuel", "tolls"] },
+      { label: "Tracking trucks and drivers", ack: "Got it, that's a big one.", next: "in_book", tone: "go", pains: ["tracking"], set: { interest: "tracking" } },
+      { label: "Safe routes, fuel and tolls", ack: "Got it, that's a big one.", next: "in_book", tone: "go", pains: ["restricted", "fuel", "tolls"], set: { interest: "routes" } },
+      { label: "Both", ack: "Got it, love that.", next: "in_book", tone: "go", pains: ["tracking", "restricted", "fuel", "tolls"], set: { interest: "both" } },
       { label: "They bring up loads / load board", next: "in_loads", tone: "warn" },
       { label: "What's this about?", ack: "Sure.", next: "in_book", tone: "warn" },
       { label: "Not interested", next: "obj:not_interested", tone: "warn" },
@@ -718,13 +718,18 @@ const flow = {
     title: "Uncover the pain",
     // The team's opening questions. Each tab is a different way in.
     variants: [
-      { label: "Why now?", script: "And what made you start looking at a truck navigation tool?" },
+      // If the opener told us their priority, build on it instead of asking again.
+      { label: "Why now?", script: () => ({
+        tracking: "You mentioned keeping track of your trucks and drivers... what's going on there right now? Did something happen?",
+        routes: "You mentioned routes, fuel and tolls... what's going on there right now? Did something happen?",
+        both: "You mentioned tracking and routes... which one's hurting more right now? And what happened?",
+      })[state.details.interest] || "And what made you start looking at a truck navigation tool?" },
       { label: "Biggest headache", script: "What's the biggest headache running your trucks day to day right now?" },
       { label: "One thing to fix", script: "If you could fix one thing about how your trucks run, what would it be?" },
       { label: "Walk me through", script: "Walk me through how a load goes, from dispatch to delivery." },
     ],
     painPick: ["restricted", "fuel", "tolls", "tracking", "parking", "ifta", "insurance", "lastmile"],
-    note: "Ask one, then stop talking. Let them name the pain; never read the list out. If they say \"just looking\", switch tabs and try another. Tap what they mention.",
+    note: "Ask one, then stop talking. Let them name the pain; never read the list out. If they say \"just looking\", switch tabs and try another. The opener pre-ticked what they picked: untick anything they don't confirm.",
     options: [
       { label: "They named something", ack: "Got it.", next: "pain_dig", tone: "go" },
       { label: "Not sure / just looking", ack: "Totally fair.", next: "pain_prompt", tone: "warn" },
@@ -861,12 +866,12 @@ const flow = {
       : "And if the demo could show you one thing, what's the #1 thing you'd want to see?",
     warnings: false,
     options: [
-      { label: "Fuel savings", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "Fuel" }, pains: ["fuel"] },
-      { label: "Tolls", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "Tolls" }, pains: ["tolls"] },
-      { label: "Truck-safe routing", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "Truck-safe routing" }, pains: ["restricted"] },
-      { label: "Tracking drivers / ETAs", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "Tracking / ETAs" }, pains: ["tracking"] },
-      { label: "Parking", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "Parking" }, pains: ["parking"] },
-      { label: "IFTA / reporting", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "IFTA" }, pains: ["ifta"] },
+      { label: "Fuel savings", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "Fuel", focusKey: "fuel" }, pains: ["fuel"] },
+      { label: "Tolls", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "Tolls", focusKey: "tolls" }, pains: ["tolls"] },
+      { label: "Truck-safe routing", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "Truck-safe routing", focusKey: "restricted" }, pains: ["restricted"] },
+      { label: "Tracking drivers / ETAs", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "Tracking / ETAs", focusKey: "tracking" }, pains: ["tracking"] },
+      { label: "Parking", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "Parking", focusKey: "parking" }, pains: ["parking"] },
+      { label: "IFTA / reporting", ack: "Love it.", next: "in_contact", tone: "go", set: { focus: "IFTA", focusKey: "ifta" }, pains: ["ifta"] },
       { label: "A bit of everything", ack: "Perfect.", next: "in_contact", tone: "warn", set: { focus: "General overview" } },
     ],
   },
@@ -1292,13 +1297,23 @@ function valuePitch() {
     "\n\nHonestly, the easiest way to see it is a free 30-minute demo with one of our specialists, using your own trucks and routes. Would [day] at [time] or [day] at [time] work better, and what time zone are you in?";
 }
 
+// Opens on the priority they picked in the opener.
+const INBOUND_PITCH = {
+  tracking: "Quick version... our fleet side, NavPro, puts every truck on one live map with ETAs, so you're not calling drivers all day to find out where they are.",
+  routes: "Quick version... with our fleet side, NavPro, dispatch sends each driver a truck-safe route built around that truck's height and weight, and you can compare routes and avoid toll areas.",
+  both: "Quick version... our fleet side, NavPro, does both. Dispatch sends truck-safe routes straight to the drivers, and you see every truck on one live map with ETAs.",
+};
+
 function inboundPitch() {
-  return "Quick version... our fleet side, NavPro, lets your dispatch send truck-safe routes straight to the drivers, with parking, fuel and live tracking in one place.\n\n" +
+  return (INBOUND_PITCH[state.details.interest] || "Quick version... our fleet side, NavPro, lets your dispatch send truck-safe routes straight to the drivers, with parking, fuel and live tracking in one place.") + "\n\n" +
     "The easiest way to see it for your fleet is a quick demo with our specialist, just 5 to 10 minutes. Do you have time now, or is later today better?";
 }
 
 function demoPreview() {
-  const lines = chosenPains().slice(0, 3).map((k) => DEMO_LINES[k]).filter(Boolean);
+  // Their #1 goes first, then the rest in the order they came up.
+  const top = state.details.focusKey;
+  const order = top ? [top, ...chosenPains().filter((k) => k !== top)] : chosenPains();
+  const lines = order.slice(0, 3).map((k) => DEMO_LINES[k]).filter(Boolean);
   const list = lines.length < 2 ? lines.join("") : lines.slice(0, -1).join(", ") + (lines.length > 2 ? "," : "") + " and " + lines[lines.length - 1];
   return "You're all set. So on the demo, our account executive will walk you through exactly how it'd look for your fleet" +
     (list ? "... " + list + "." : ", using your own trucks and routes.") +
@@ -1351,6 +1366,7 @@ function landOn(id) {
   // One pain named already answers "what's the #1 thing", so don't ask it again.
   if (id === "in_focus" && chosenPains().length === 1) {
     state.details.focus = PAINS[chosenPains()[0]].label;
+    state.details.focusKey = chosenPains()[0];
     if (!state.answered.includes(id)) state.answered.push(id);
     return landOn("in_contact");
   }
@@ -1450,7 +1466,8 @@ function render() {
   const vIdx = state.variant[key] || 0;
   const tailored = card.byPersona && state.persona && card.byPersona[state.persona];
   if (tailored) head += `<span class="chip persona">Tailored: ${esc(PERSONAS[state.persona].label)}</span>`;
-  const script = card.build ? card.build() : tailored ? tailored : card.variants ? card.variants[vIdx].script : card.script;
+  const vScript = card.variants && card.variants[vIdx].script;
+  const script = card.build ? card.build() : tailored ? tailored : card.variants ? (typeof vScript === "function" ? vScript() : vScript) : card.script;
   const guard = [card.guard, card.build && card.warnings !== false ? pitchWarnings() : ""].filter(Boolean).join(" ");
   const painList = card.discovery || card.painPick
     ? `<div class="pains">${(card.painPick || painOrder()).map((k) => {
