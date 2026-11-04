@@ -174,6 +174,13 @@ button { -webkit-tap-highlight-color: transparent; }
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 .pain[aria-pressed="true"] .pl { color: var(--accent-strong); }
+/* Compact "tick what they mention" chips, shown under the answers */
+.pickhead { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; margin-bottom: -6px; }
+.pains.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pains.chips .pain { display: inline-flex; gap: 8px; padding: 6px 12px; border-radius: 999px; box-shadow: none; }
+.pains.chips .pain::before { width: 14px; height: 14px; border-radius: 4px; }
+.pains.chips .pain .pq { font-size: .9rem; }
+.pains.chips .pain .pl { display: none; }
 @media (max-width: 560px) { .pain { grid-template-columns: auto 1fr; } .pain .pl { grid-column: 2; } }
 
 /* Answer buttons: the main path is solid brand blue; everything else is a white button */
@@ -727,20 +734,21 @@ const flow = {
   },
   in_why: {
     title: "Uncover the pain",
-    // The team's opening questions. Each tab is a different way in.
-    variants: [
-      // If the opener told us their priority, build on it instead of asking again.
-      { label: "Why now?", script: () => ({
-        tracking: "You mentioned keeping track of your trucks and drivers... what's going on there right now? Did something happen?",
-        routes: "You mentioned routes, fuel and tolls... what's going on there right now? Did something happen?",
-        both: "You mentioned tracking and routes... which one's hurting more right now? And what happened?",
-      })[state.details.interest] || "And what made you start looking at a truck navigation tool?" },
-      { label: "Biggest headache", script: "What's the biggest headache running your trucks day to day right now?" },
-      { label: "One thing to fix", script: "If you could fix one thing about how your trucks run, what would it be?" },
-      { label: "Walk me through", script: "Walk me through how a load goes, from dispatch to delivery." },
-    ],
+    // If the opener told us their priority, build on it instead of asking again.
+    build: () => ({
+      tracking: "You mentioned keeping track of your trucks and drivers... what's going on there right now? Did something happen?",
+      routes: "You mentioned routes, fuel and tolls... what's going on there right now? Did something happen?",
+      both: "You mentioned tracking and routes... which one's hurting more right now? And what happened?",
+    })[state.details.interest] || "And what made you start looking at a truck navigation tool?",
+    warnings: false,
+    // The team's other ways in, if the first question doesn't land.
+    asks: [["If that doesn't land, try", [
+      "What's the biggest headache running your trucks day to day right now?",
+      "If you could fix one thing about how your trucks run, what would it be?",
+      "Walk me through how a load goes, from dispatch to delivery.",
+    ]]],
     painPick: ["restricted", "fuel", "tolls", "tracking", "parking", "ifta", "insurance", "lastmile"],
-    note: "Ask one, then stop talking. Let them name the pain; never read the list out. If they say \"just looking\", switch tabs and try another. The opener pre-ticked what they picked: untick anything they don't confirm.",
+    note: "Ask one, then stop talking. Let them name the pain; never read the list out. If they say \"just looking\", try one of the other questions. The opener pre-ticked what they picked: untick anything they don't confirm.",
     options: [
       { label: "They named something", ack: "Got it.", next: "pain_dig", tone: "go" },
       { label: "Not sure / just looking", ack: "Totally fair.", next: "pain_prompt", tone: "warn" },
@@ -1490,7 +1498,7 @@ function render() {
   const script = card.build ? card.build() : tailored ? tailored : card.variants ? (typeof vScript === "function" ? vScript() : vScript) : card.script;
   const guard = [card.guard, card.build && card.warnings !== false ? pitchWarnings() : ""].filter(Boolean).join(" ");
   const painList = card.discovery || card.painPick
-    ? `<div class="pains">${(card.painPick || painOrder()).map((k) => {
+    ? `${card.painPick ? `<div class="pickhead">Tick what they mention</div>` : ""}<div class="pains${card.painPick ? " chips" : ""}">${(card.painPick || painOrder()).map((k) => {
         const on = state.pains.includes(k);
         return `<button class="pain" type="button" aria-pressed="${on}" data-pain="${k}"><span class="pq">${card.painPick ? esc(PAINS[k].label) : esc(PAINS[k].qs[0]) + PAINS[k].qs.slice(1).map((q) => `<br><span class="more">${esc(q)}</span>`).join("")}</span><span class="pl">${on ? "Mentioned" : card.painPick ? "" : esc(PAINS[k].label)}</span></button>`;
       }).join("")}</div>`
@@ -1525,11 +1533,12 @@ function render() {
     ${isObj ? `<div class="note gate"><b>Rule</b><span>${esc(OBJECTION_RULE)}</span></div>` : ""}
     ${card.crm ? `<div class="note gate ok"><b>HubSpot</b><span>${esc(crmText(card))}</span></div>` : ""}
     ${card.note ? `<div class="note"><b>${card.end ? "Next" : "Coach"}</b><span>${esc(card.note)}</span></div>` : ""}
-    ${painList}
+    ${card.painPick ? "" : painList}
     ${checklist}
     ${guard ? `<div class="note guard"><b>Don't</b><span>${esc(guard)}</span></div>` : ""}
     ${card.gate ? gateNote() : ""}
     <div class="options">${optHtml}</div>
+    ${card.painPick ? painList : ""}
     <div class="card-foot">
       <button class="btn" type="button" id="backBtn" ${history.length ? "" : "disabled"}>← Back</button>
       <span class="hint"><kbd>1</kbd>–<kbd>9</kbd> pick an answer · <kbd>Backspace</kbd> back · <kbd>Q</kbd> qualify${isObj ? " · <kbd>Esc</kbd> back to script" : ""}</span>
