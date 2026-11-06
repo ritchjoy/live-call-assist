@@ -516,7 +516,7 @@ const flow = {
     script: "I'm with Trucker Path. I know I'm catching you cold here, mind if I take just half a minute? Tell you why I called, then you can let me know if it's relevant or not?",
     note: "Wait for the yes. Once they say \"okay\", they've agreed to listen, and the pitch lands better.",
     options: [
-      { label: "Sure, go ahead", ack: "Appreciate that, I'll be quick.", next: "reason", tone: "go" },
+      { label: "Sure, go ahead", ack: "Appreciate that.", next: "reason", tone: "go" },
       { label: "What's this about?", ack: "Sure.", next: "reason", tone: "go" },
       { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
       { label: "Just send me an email", next: "obj:send_email", tone: "warn" },
@@ -526,7 +526,7 @@ const flow = {
   reason: {
     title: "Why you're calling + their role",
     script:
-      "Quick background... (deliberate) we're Trucker Path, one of the leading truck navigation apps in the US... used by over a million truck drivers every month. Fleets like Costco, Builders FirstSource and Wilson Logistics use it too... and plenty of smaller carriers.\n\n" +
+      "So yeah, just a quick background... (deliberate) we're Trucker Path, one of the leading truck navigation apps in the US... used by over a million truck drivers every month. Fleets like Costco, Builders FirstSource and Wilson Logistics use it too... and plenty of smaller carriers.\n\n" +
       "(slow) Just so I don't waste your time... what part of the operation do you look after? Are you more on the owner side, running the fleet, safety, or dispatch?",
     note: "If you know their freight, swap in a fleet like theirs: reefer → Schuster or Hurricane Express, lumber and building → YellaWood, small dry van → Arka Express. Then pick the role they actually do; the next card is written for that person.",
     guard: "Only name fleets from the customer list in the Sales Knowledge Base. Don't say what they pay for or quote results.",
@@ -986,7 +986,7 @@ const flow = {
     script: "Hey [first name], thanks for picking up. It's just [your name] here over at Trucker Path. I know I'm catching you cold here, mind if I take just half a minute? Tell you why I called, then you can let me know if it's relevant or not?",
     note: "Fresh start with the new person. Keep it light and wait for the yes.",
     options: [
-      { label: "Sure, go ahead", ack: "Appreciate that, I'll be quick.", next: "reason", tone: "go" },
+      { label: "Sure, go ahead", ack: "Appreciate that.", next: "reason", tone: "go" },
       { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
       { label: "Not interested", next: "obj:not_interested", tone: "warn" },
       { label: "How did you get my number?", next: "obj:how_number", tone: "warn" },
