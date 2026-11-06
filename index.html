@@ -431,7 +431,7 @@ const NEVER_PROMISE = [
 ];
 
 // A cold call sells the next conversation. Keep discovery to what the booking checklist needs; the deep dive is the demo.
-const MAIN_FLOW = ["opener", "reason", "pitch", "fleet", "discovery", "pain_dig", "pain_impact", "pain_confirm", "decision", "timeline", "budget", "book", "confirm"];
+const MAIN_FLOW = ["opener", "permission", "reason", "pitch", "fleet", "discovery", "pain_dig", "pain_impact", "pain_confirm", "decision", "timeline", "budget", "book", "confirm"];
 
 // Shown on every objection card.
 const OBJECTION_RULE = "Pause. Acknowledge with a ledge line. Ask one question. Don't argue, and don't repeat the rebuttal.";
@@ -502,12 +502,25 @@ const flow = {
     note: "Sound confident and lead the call. With \"How have you been?\", don't make small talk: go straight to your reason after they answer.",
     guard: "Never open with \"Did I catch you at a bad time?\" It hands them an easy exit.",
     options: [
-      { label: "That's me", ack: "Oh, you are? Awesome. So yeah, it's just [your name] here.", next: "reason", tone: "go" },
+      { label: "That's me", ack: "Oh, you are? Awesome. So yeah, it's just [your name] here.", next: "permission", tone: "go" },
       { label: "\"May I know why you're calling?\"", next: "gatekeeper_why", tone: "warn" },
       { label: "Someone else is in charge", next: "gatekeeper", tone: "warn" },
       { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
       { label: "Not interested", next: "obj:not_interested", tone: "warn" },
       { label: "How did you get my number?", next: "obj:how_number", tone: "warn" },
+    ],
+  },
+  // Ask for the 30 seconds once they confirm they're the right person. Skipped if the opener already asked (see landOn).
+  permission: {
+    title: "Ask for 30 seconds",
+    script: "I'm with Trucker Path. I know I'm catching you cold here, mind if I take just half a minute? Tell you why I called, then you can let me know if it's relevant or not?",
+    note: "Wait for the yes. Once they say \"okay\", they've agreed to listen, and the pitch lands better.",
+    options: [
+      { label: "Sure, go ahead", ack: "Appreciate that, I'll be quick.", next: "reason", tone: "go" },
+      { label: "What's this about?", ack: "Sure.", next: "reason", tone: "go" },
+      { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
+      { label: "Just send me an email", next: "obj:send_email", tone: "warn" },
+      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
     ],
   },
   reason: {
@@ -1277,8 +1290,8 @@ function fill(text) {
    move forward. "pain" moves one step further: they've opened up, so skip the
    question that was fishing for it. Everything later resumes the same card. */
 const AFTER_OBJECTION = {
-  continue: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "reason" },
-  pain: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "reason", reason: "pitch", pitch: "fleet" },
+  continue: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "reason", permission: "reason" },
+  pain: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "reason", permission: "reason", reason: "pitch", pitch: "fleet" },
 };
 
 function afterObjection(kind) {
@@ -1386,6 +1399,11 @@ function qualLeft() { return QUALIFY[state.mode].filter((id) => !state.answered.
 
 // Where to land: skip qualification cards already answered, and don't wrap up an inbound demo that isn't booked.
 function landOn(id) {
+  // The Permission and Tailored trigger openers already asked for the 30 seconds.
+  if (id === "permission" && [1, 2].includes(state.variant.opener || 0)) {
+    if (!state.answered.includes(id)) state.answered.push(id);
+    id = "reason";
+  }
   // Booked before the truck count came up (e.g. "What's this about?"): ask it now.
   if (id === "in_why" && !state.answered.includes("in_trucks")) id = "in_trucks";
   if (QUALIFY[state.mode].includes(id) && state.answered.includes(id)) {
