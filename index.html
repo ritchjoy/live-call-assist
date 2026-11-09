@@ -666,7 +666,7 @@ const flow = {
   /* ---------- Inbound lead: they came to us. Book the demo first, qualify after. ---------- */
   in_opener: {
     title: "Inbound opener",
-    script: "Hey [first name], it's [your name] from Trucker Path. I saw you've been checking us out, so I wanted to reach out personally. What's the bigger priority for you right now... keeping track of your trucks and drivers, or getting them on truck-safe routes that save on fuel and tolls?",
+    script: "Hey [first name], it's [your name] from Trucker Path. I saw you've been checking us out, so I wanted to reach out personally. Are you planning on using it for keeping track of your trucks and drivers, or more on routes for fuel and tolls?",
     note: "Call fast; inbound leads go cold within hours. Options 1–4 answer your question; their pick is the first sign of their need. Load boards only come up if they raise it (option 5).",
     guard: "They came to us. Don't ask permission to talk, and never open with \"Did I catch you at a bad time?\"",
     options: [
@@ -683,7 +683,7 @@ const flow = {
   },
   in_remind: {
     title: "Remind them",
-    script: "No worries at all. You'd checked out Trucker Path recently, on the app or our website. What's the bigger priority for you right now... keeping track of your trucks and drivers, or getting them on truck-safe routes that save on fuel and tolls?",
+    script: "No worries at all. You'd checked out Trucker Path recently, on the app or our website. Are you planning on using it for keeping track of your trucks and drivers, or more on routes for fuel and tolls?",
     options: [
       { label: "Tracking trucks and drivers", ack: "Got it, that's a big one.", next: "in_trucks", tone: "go", pains: ["tracking"], set: { interest: "tracking" } },
       { label: "Safe routes, fuel and tolls", ack: "Got it, that's a big one.", next: "in_trucks", tone: "go", pains: ["restricted", "fuel", "tolls"], set: { interest: "routes" } },
