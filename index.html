@@ -548,40 +548,41 @@ const flow = {
       "You know... one low bridge or restricted road, and you're paying for a ticket, a detour, a missed delivery window. Sometimes worse.\n\n" +
       "What we actually find... the problem isn't the drivers. (pause) It's that nobody gave them a route built for the truck.\n\n" +
       "So that's what NavPro does... your dispatcher sends a truck-safe route, and the driver sees parking and weigh stations ahead.\n\n" +
-      "So that's really all I'm calling about. (slow) If there's one thing you could improve about how your drivers get their routes, what would it be?",
+      "I know you probably get a lot of calls about new apps, but would you be opposed to a free 10 to 15 minute demo, maybe later this week? Would [day] at [time] or [day] at [time] work better?",
     byPersona: {
       owner:
-        "So... (slow) the reason I'm calling... most owners I talk to can't really see what's happening on the road day to day. Drivers are routing on phone GPS... apps built for cars, that don't know a loaded trailer from a sedan.\n\n" +
-        "You know... one wrong turn onto a restricted road, and you're the one paying for it. A ticket, a detour, a missed delivery window. Sometimes worse.\n\n" +
+        "So... (slow) the reason I'm calling... most owners I talk to already have an ELD, and it does a great job with hours, logs and seeing where the truck is.\n\n" +
+        "But here's the thing... the ELD tells you where the truck is, not whether it's on the right road. The driver's still routing on phone GPS... apps built for cars, that don't know a loaded trailer from a sedan.\n\n" +
+        "You know... one wrong turn onto a restricted road or a low bridge, and you're the one paying for it. A ticket, a detour, a missed delivery window. Sometimes worse.\n\n" +
         "What we actually find... the problem isn't the drivers. (pause) It's that nobody gave them a route built for the truck, and nobody in the office can see when they go off it.\n\n" +
-        "So that's what NavPro does... your dispatch sends a truck-safe route, and you can see the route you planned next to what actually got driven.\n\n" +
-        "So that's really all I'm calling about. (slow) If there's one thing you could improve about how your trucks run day to day, what would it be?",
+        "So that's what NavPro does... and it works alongside your ELD, not instead of it. Dispatch sends a truck-safe route straight to the driver's app, built around that truck's height and weight. And after the trip, you can see the route you planned next to what actually got driven.\n\n" +
+        "I know you probably get a lot of calls about new apps, but would you be opposed to a free 10 to 15 minute demo, maybe later this week? Would [day] at [time] or [day] at [time] work better?",
       ops:
         "So... (slow) the reason I'm calling... most fleet managers I talk to plan a route one way... and it gets driven another. Then they're piecing it together after the fact.\n\n" +
         "You know... extra miles nobody planned, a missed window, a truck on a road it shouldn't be on. And you only hear about it later.\n\n" +
         "What we actually find... the problem isn't the drivers. (pause) It's that the route never lived in one place the office controls.\n\n" +
         "So that's what NavPro does... dispatch sends a truck-safe route, and you get planned versus actual, so off-route miles show up in a report instead of a phone call.\n\n" +
-        "So that's really all I'm calling about. (slow) If there's one thing you could improve about how routes get planned and actually followed, what would it be?",
+        "I know you probably get a lot of calls about new apps, but would you be opposed to a free 10 to 15 minute demo, maybe later this week? Would [day] at [time] or [day] at [time] work better?",
       safety:
         "So... (slow) the reason I'm calling... most safety managers I talk to have every truck's height and weight on file... but the driver's still routing on phone GPS. Apps built for cars, that don't know a loaded trailer from a sedan.\n\n" +
         "You know... one low bridge or restricted road, and it's a ticket, a detour, an incident report. Sometimes worse.\n\n" +
         "What we actually find... the problem isn't the drivers. (pause) It's that the truck's dimensions never make it into the route.\n\n" +
         "So that's what NavPro does... you set up the truck profile once, height, weight, length, axles, and every route dispatch sends is built around it.\n\n" +
-        "So that's really all I'm calling about. (slow) If there's one thing you could improve about how your drivers' routes handle truck size and restrictions, what would it be?",
+        "I know you probably get a lot of calls about new apps, but would you be opposed to a free 10 to 15 minute demo, maybe later this week? Would [day] at [time] or [day] at [time] work better?",
       dispatcher:
         "So... (slow) the reason I'm calling... most dispatchers I talk to spend half the day on the phone. An address changes, and it's a call, a text, another call... then chasing the driver for an ETA.\n\n" +
         "You know... one missed message, and the driver's headed to the wrong place, or onto a road the truck shouldn't be on.\n\n" +
         "What we actually find... the problem isn't the drivers. (pause) It's that the route only lives in a text thread.\n\n" +
         "So that's what NavPro does... you send a truck-safe route straight to the driver from the office, and when something changes, you send the new one the same way.\n\n" +
-        "So that's really all I'm calling about. (slow) If there's one thing you could improve about how routes and changes get to your drivers, what would it be?",
+        "I know you probably get a lot of calls about new apps, but would you be opposed to a free 10 to 15 minute demo, maybe later this week? Would [day] at [time] or [day] at [time] work better?",
     },
-    note: "STOP after the question. Let them answer. Do not fill the silence.",
+    note: "STOP after the ask. Let them answer. Do not fill the silence. If they want to know more first, go to the questions and ask again at the end.",
     guard: "Never promise it prevents incidents or guarantees compliance. Describe what it does, not outcomes.",
     options: [
-      { label: "Names something specific", ack: "That's a good one. Yeah, I hear that a lot.", next: "fleet", tone: "go", bant: { need: "yes" }, sop: { pain: "yes" }, sub: "Note their exact words. You'll play them back in the recap." },
-      { label: "Not sure / nothing specific", ack: "Fair enough, appreciate the honest answer.", next: "fleet", tone: "warn", sub: "Keep going. The next questions often bring it out." },
-      { label: "Honestly, it runs fine", ack: "That's great to hear.", next: "fleet", tone: "warn", sub: "Stay curious. If the next questions don't turn up anything, close politely." },
-      { label: "Truck GPS or another routing tool", next: "obj:have_provider", tone: "warn" },
+      { label: "Agrees a time", ack: "Perfect, you're locked in. So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute.", next: "fleet", tone: "go", demo: "later", sub: "Type the day, time and time zone in the notes box." },
+      { label: "Wants to know more first", ack: "Totally fair. Let me ask you a couple of quick ones then.", next: "fleet", tone: "warn", sub: "Go through the questions; you'll ask for the demo again at the end." },
+      { label: "We already have an ELD / routing tool", next: "obj:have_provider", tone: "warn" },
+      { label: "How much is it?", next: "obj:price", tone: "warn" },
       { label: "Other priorities right now", next: "obj:priorities", tone: "warn" },
       { label: "Just send me an email", next: "obj:send_email", tone: "warn" },
       { label: "Not interested", next: "obj:not_interested", tone: "warn" },
@@ -1281,7 +1282,7 @@ function esc(s) {
 }
 
 function fill(text) {
-  return esc(text.replace(/\{(\w+)\}/g, (_, k) => k === "demo" ? (state.mode === "inbound" ? "5 to 10 minutes" : "30 minutes") : k === "price" ? PRICES[state.size] || "[their starting price; our team quotes 50+ trucks]" : `[${PLACEHOLDERS[k] || k}]`))
+  return esc(text.replace(/\{(\w+)\}/g, (_, k) => k === "demo" ? (state.mode === "inbound" ? "5 to 10 minutes" : "10 to 15 minutes") : k === "price" ? PRICES[state.size] || "[their starting price; our team quotes 50+ trucks]" : `[${PLACEHOLDERS[k] || k}]`))
     .replace(/\[([^\]]+)\]/g, '<span class="fillin">[$1]</span>')
     .replace(/ ?\(([a-z][a-z ]{0,18})\) ?/g, " ");
 }
@@ -1303,6 +1304,8 @@ function afterObjection(kind) {
 function routeFor(next) {
   if (next === "after_pain") return state.mode === "inbound" ? "in_role" : "decision";
   if (next === "after_trucks") return state.demo ? "in_why" : "in_book";
+  // Cold call: a demo agreed on the pitch skips the booking ask later.
+  if (state.mode !== "inbound" && next === "book" && state.demo) return "confirm";
   if (state.mode !== "inbound" || (next !== "book" && next !== "timeline")) return next;
   if (state.demo) return "continue";
   return next === "book" ? "in_book" : "in_later";
@@ -1334,7 +1337,7 @@ function valuePitch() {
     ? lines.join("\n\n")
     : "For a fleet like yours, the big win is usually getting your drivers on routes built for the truck, and seeing where everyone is without picking up the phone.";
   return (lines.length ? "So based on what you told me...\n\n" : "") + body +
-    "\n\nHonestly, the easiest way to see it is a free 30-minute demo with one of our specialists, using your own trucks and routes. Would [day] at [time] or [day] at [time] work better, and what time zone are you in?";
+    "\n\nHonestly, the easiest way to see it is a free 10 to 15 minute demo with one of our specialists, using your own trucks and routes. Would [day] at [time] or [day] at [time] work better, and what time zone are you in?";
 }
 
 function demoPreview() {
