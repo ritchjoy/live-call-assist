@@ -723,12 +723,12 @@ const flow = {
   },
   in_book: {
     title: "Book the demo",
-    build: () => inboundPitch(),
-    note: "Keep it short. The demo does the selling. Offer two times, not a yes/no.",
+    script: "I'd love to set up a free, consultation demo with one of our specialists. During the demo, they'll show you how it works for your situation. If you're trying to keep drivers on truck-safe routes and out of restricted roads, they'll show you how routing and custom locations work for your trucks. If you're watching fuel costs, they'll show you the fuel discounts and controls. And if you're looking at dashboards and reporting, they'll show you what your team would see day to day. Would [day] at [time] or [day] at [time] work better, and what time zone are you in?",
+    note: "Offer two real times, not a yes/no. Type the day, time and time zone in the notes box.",
     options: [
-      { label: "Now works", ack: "Awesome. So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute.", next: "in_why", tone: "go", demo: "now" },
-      { label: "Picks a time later today or tomorrow", ack: "Perfect, you're locked in. So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute.", next: "in_why", tone: "go", demo: "later", sub: "Type the time in the notes box." },
-      { label: "Later, but no time yet", next: "in_later", tone: "warn" },
+      { label: "Picks one of the times", ack: "Perfect, you're locked in. So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute.", next: "in_why", tone: "go", demo: "later", sub: "Type the day, time and time zone in the notes box." },
+      { label: "Can do it right now", ack: "Awesome. So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute.", next: "in_why", tone: "go", demo: "now" },
+      { label: "Neither time works", next: "in_later", tone: "warn" },
       { label: "Send me info first", next: "obj:send_email", tone: "warn" },
       { label: "Need to check with the owner", next: "obj:need_owner", tone: "warn" },
       { label: "How much is it?", next: "obj:price", tone: "warn" },
@@ -922,7 +922,8 @@ const flow = {
   },
   in_tz: {
     title: "Time zone",
-    script: "And what time zone are you in, so I've got it right on the invite?",
+    script: "And just to confirm the invite, that's [time zone] time, right?",
+    note: "They gave it when you booked. Tap it so it lands in the notes.",
     options: [
       { label: "Eastern", ack: "Perfect.", next: "in_wrap", tone: "go", set: { tz: "Eastern" } },
       { label: "Central", ack: "Perfect.", next: "in_wrap", tone: "go", set: { tz: "Central" } },
@@ -1334,18 +1335,6 @@ function valuePitch() {
     : "For a fleet like yours, the big win is usually getting your drivers on routes built for the truck, and seeing where everyone is without picking up the phone.";
   return (lines.length ? "So based on what you told me...\n\n" : "") + body +
     "\n\nHonestly, the easiest way to see it is a free 30-minute demo with one of our specialists, using your own trucks and routes. Would [day] at [time] or [day] at [time] work better, and what time zone are you in?";
-}
-
-// Opens on the priority they picked in the opener.
-const INBOUND_PITCH = {
-  tracking: "Quick version... our fleet side, NavPro, puts every truck on one live map with ETAs, so you're not calling drivers all day to find out where they are.",
-  routes: "Quick version... with our fleet side, NavPro, dispatch sends each driver a truck-safe route built around that truck's height and weight, and you can compare routes and avoid toll areas.",
-  both: "Quick version... our fleet side, NavPro, does both. Dispatch sends truck-safe routes straight to the drivers, and you see every truck on one live map with ETAs.",
-};
-
-function inboundPitch() {
-  return (INBOUND_PITCH[state.details.interest] || "Quick version... our fleet side, NavPro, lets your dispatch send truck-safe routes straight to the drivers, with parking, fuel and live tracking in one place.") + "\n\n" +
-    "The easiest way to see it for your fleet is a quick demo with our specialist, just 5 to 10 minutes. Do you have time now, or is later today better?";
 }
 
 function demoPreview() {
