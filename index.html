@@ -431,7 +431,7 @@ const NEVER_PROMISE = [
 ];
 
 // A cold call sells the next conversation. Keep discovery to what the booking checklist needs; the deep dive is the demo.
-const MAIN_FLOW = ["opener", "reason", "pitch", "followup", "cta", "fleet", "confirm"];
+const MAIN_FLOW = ["opener", "fleet", "reason", "pitch", "followup", "cta", "details", "confirm"];
 
 // Cold call, step 3 to 5: one version per role. opts = the two options in the question; follow = the follow-up for each.
 const COLD_BACKGROUND = "So yeah, just a quick background. We're used by over a million truck drivers every month. Fleets like Costco, Builders FirstSource and Wilson Logistics use our app too, plus plenty of smaller carriers.";
@@ -536,7 +536,7 @@ const flow = {
     note: "Sound confident and lead the call. With \"How have you been?\", don't make small talk: go straight to your reason after they answer.",
     guard: "Never open with \"Did I catch you at a bad time?\" It hands them an easy exit.",
     options: [
-      { label: "That's me", ack: "Oh, you are? Awesome. So yeah, it's just [your name] here.", next: "reason", tone: "go" },
+      { label: "That's me", ack: "Oh, you are? Awesome. So yeah, it's just [your name] here.", next: "fleet", tone: "go" },
       { label: "\"May I know why you're calling?\"", next: "gatekeeper_why", tone: "warn" },
       { label: "Someone else is in charge", next: "gatekeeper", tone: "warn" },
       { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
@@ -609,7 +609,7 @@ const flow = {
     note: "Say first: play back their answer, e.g. \"Yeah, that's the part most owners only notice after a ticket.\" Ask the yes/no question, then STOP. Offer the days only after they answer.",
     guard: "Fuel plans are Business tier. Don't imply they come in the starting package.",
     options: [
-      { label: "Picks a day and time", ack: "Perfect, you're locked in. So our specialist can tailor it to you, just a couple of quick details.", next: "fleet", tone: "go", demo: "later", sub: "Type the day, time and time zone in the notes box." },
+      { label: "Picks a day and time", ack: "Perfect, you're locked in. So our specialist can tailor it to you, just a couple of quick details.", next: "details", tone: "go", demo: "later", sub: "Type the day, time and time zone in the notes box." },
       { label: "Neither day works", ack: "No problem, what day works better for you, this week or next?", next: "resume", tone: "warn", sub: "Stay here and get a day." },
       { label: "Hesitant", next: "cta_hesitant", tone: "warn" },
       { label: "Not this week or next", next: "callback", tone: "warn" },
@@ -623,22 +623,33 @@ const flow = {
     script: "Totally fair, most people I call say the same thing. Is it the timing, or the 15 minutes?",
     note: "Then wait. If it's the timing, offer a different day. If it's the 15 minutes, offer 10.",
     options: [
-      { label: "Picks a day and time", ack: "Perfect, you're locked in. So our specialist can tailor it to you, just a couple of quick details.", next: "fleet", tone: "go", demo: "later", sub: "Type the day, time and time zone in the notes box." },
+      { label: "Picks a day and time", ack: "Perfect, you're locked in. So our specialist can tailor it to you, just a couple of quick details.", next: "details", tone: "go", demo: "later", sub: "Type the day, time and time zone in the notes box." },
       { label: "Later, not now", next: "callback", tone: "warn" },
       { label: "Send me info first", next: "obj:send_email", tone: "warn" },
       { label: "Still not interested", next: "obj:not_interested", tone: "warn" },
     ],
   },
   fleet: {
-    title: "Quick details for the specialist",
-    script: "And how many trucks and drivers are you running right now, and what kind of equipment? And what are you using for your ELD?",
-    note: "Booked already? This is just for the AE handoff. Note the equipment (flatbed, reefer, dry van, hazmat) and their ELD in the notes box.",
+    title: "How many trucks?",
+    script: "How many trucks are you managing right now?",
+    note: "Ask it straight after they confirm it's them. It tells you if they're in the campaign before you spend time on the role and pitch.",
     options: [
-      { label: "3–10 trucks", ack: "Okay, perfect.", next: "after_fleet", tone: "go", sop: { fleet: "yes" }, size: "3-10" },
-      { label: "11–50 trucks", ack: "Okay, perfect.", next: "after_fleet", tone: "go", sop: { fleet: "yes" }, size: "11-50" },
-      { label: "50+ trucks", ack: "Oh nice, that's a solid operation.", next: "after_fleet", tone: "go", sop: { fleet: "yes" }, size: "50+" },
+      { label: "3–10 trucks", ack: "Okay, perfect.", next: "reason", tone: "go", sop: { fleet: "yes" }, size: "3-10" },
+      { label: "11–50 trucks", ack: "Okay, perfect.", next: "reason", tone: "go", sop: { fleet: "yes" }, size: "11-50" },
+      { label: "50+ trucks", ack: "Oh nice, that's a solid operation.", next: "reason", tone: "go", sop: { fleet: "yes" }, size: "50+" },
       { label: `Fewer than ${CAMPAIGN.minTrucks} trucks`, next: "end_out_of_campaign", tone: "stop", sop: { fleet: "no" } },
-      { label: "Rather not say", ack: "No worries at all.", next: "after_fleet", tone: "warn", sop: { fleet: "unknown" } },
+      { label: "Rather not say", ack: "No worries at all.", next: "reason", tone: "warn", sop: { fleet: "unknown" } },
+      { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
+      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
+    ],
+  },
+  details: {
+    title: "Quick details for the specialist",
+    script: "And what kind of equipment are you running, and what are you using for your ELD?",
+    note: "Booked already? This is just for the AE handoff. Type the equipment (flatbed, reefer, dry van, hazmat) and their ELD in the notes box.",
+    options: [
+      { label: "Shares equipment and ELD", ack: "Okay, perfect.", next: "confirm", tone: "go" },
+      { label: "Rather not say", ack: "No worries at all.", next: "confirm", tone: "warn" },
     ],
   },
   confirm: {
@@ -975,7 +986,7 @@ const flow = {
     script: "Hey [first name], thanks for picking up. It's just [your name] here over at Trucker Path. I know I'm catching you cold here, mind if I take just half a minute? Tell you why I called, then you can let me know if it's relevant or not?",
     note: "Fresh start with the new person. Keep it light and wait for the yes.",
     options: [
-      { label: "Sure, go ahead", ack: "Appreciate that.", next: "reason", tone: "go" },
+      { label: "Sure, go ahead", ack: "Appreciate that.", next: "fleet", tone: "go" },
       { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
       { label: "Not interested", next: "obj:not_interested", tone: "warn" },
       { label: "How did you get my number?", next: "obj:how_number", tone: "warn" },
@@ -1279,8 +1290,8 @@ function fill(text) {
    move forward. "pain" moves one step further: they've opened up, so skip the
    question that was fishing for it. Everything later resumes the same card. */
 const AFTER_OBJECTION = {
-  continue: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "reason" },
-  pain: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "reason", reason: "pitch", pitch: "cta", followup: "cta", followup_fine: "cta" },
+  continue: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "fleet" },
+  pain: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "fleet", fleet: "reason", reason: "pitch", pitch: "cta", followup: "cta", followup_fine: "cta" },
 };
 
 function afterObjection(kind) {
@@ -1290,7 +1301,6 @@ function afterObjection(kind) {
 // Inbound uses its own booking cards; once the demo is booked, don't ask for it again.
 function routeFor(next) {
   if (next === "after_pain") return state.mode === "inbound" ? "in_role" : "cta";
-  if (next === "after_fleet") return state.demo ? "confirm" : "cta";
   if (next === "after_trucks") return state.demo ? "in_why" : "in_book";
   // Cold call: "book" is the CTA until a demo is agreed; "timing's off" becomes a callback.
   if (state.mode !== "inbound" && next === "book") return state.demo ? "confirm" : "cta";
