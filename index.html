@@ -976,9 +976,12 @@ const flow = {
   },
   gatekeeper_why: {
     title: "Gatekeeper: why are you calling?",
-    script: "Yeah, of course. It's just [your name] over at Trucker Path. We've got a tool called NavPro that helps the office plan truck routes and send them out to the drivers. I just wanted a quick word with whoever looks after routing or dispatch to see if it's even relevant. Who would that be?",
-    note: "Short, honest and friendly. Give the real reason, then ask for the person. Don't pitch to the gatekeeper.",
-    guard: "Don't pretend you know the decision maker or that they're expecting your call.",
+    variants: [
+      { label: "Cold (no past contact)", script: "Yeah, of course. It's just [your name] over at Trucker Path. We've got a tool called NavPro that helps the office plan truck routes and send them out to the drivers. I just wanted a quick word with whoever looks after routing or dispatch to see if it's even relevant. Who would that be?" },
+      { label: "They inquired before", script: "Yeah, of course. It's just [your name] over at Trucker Path. Someone at your company reached out to us about NavPro [when: about 2 weeks ago], so I'm just calling to make sure everything's set. Who would be the best person to talk to about that?" },
+    ],
+    note: "Short, honest and friendly. Give the real reason, then ask for the person. Don't pitch to the gatekeeper. Use \"They inquired before\" only when HubSpot shows a real inquiry, form fill or signup from this company, and say when it actually was.",
+    guard: "Don't say they inquired unless HubSpot shows it. Don't pretend you know the decision maker or that they're expecting your call.",
     options: [
       { label: "Puts you through", next: "transferred", tone: "go" },
       { label: "Gives a name or contact", next: "end_referral", tone: "go" },
