@@ -431,7 +431,41 @@ const NEVER_PROMISE = [
 ];
 
 // A cold call sells the next conversation. Keep discovery to what the booking checklist needs; the deep dive is the demo.
-const MAIN_FLOW = ["opener", "permission", "reason", "pitch", "fleet", "discovery", "pain_dig", "pain_impact", "pain_confirm", "decision", "timeline", "budget", "book", "confirm"];
+const MAIN_FLOW = ["opener", "reason", "pitch", "followup", "cta", "fleet", "confirm"];
+
+// Cold call, step 3 to 5: one version per role. opts = the two options in the question; follow = the follow-up for each.
+const COLD_BACKGROUND = "So yeah, just a quick background. We're used by over a million truck drivers every month. Fleets like Costco, Builders FirstSource and Wilson Logistics use our app too, plus plenty of smaller carriers.";
+const COLD_ROLE = {
+  owner: {
+    reason: "So... the reason I'm calling... I work with a team that helps owners like you handle navigation for your trucks, so your drivers aren't stuck on phone GPS built for cars. Most owners I talk to already have hours and logs covered, but the route once a truck leaves the yard is where the surprises usually show up.",
+    ask: "Just out of curiosity, do your drivers pick their own routes on phone GPS, or does the office build the route and send it to them?",
+    opts: ["drivers pick their own on phone GPS", "office builds and sends the route"],
+    follow: ["drivers ending up on roads they shouldn't be on", "the planned route matching what actually gets driven"],
+    cta: "run your routes",
+  },
+  ops: {
+    reason: "So... the reason I'm calling... I work with a team that helps fleet managers like you handle navigation for the whole operation, so the route you plan is the route the truck actually drives. Most fleet managers I talk to can tell you where every truck is, but not whether it stayed on the planned route.",
+    ask: "Just out of curiosity, is the route planned in the office and sent out, or does each driver work out their own?",
+    opts: ["office plans it and sends it out", "each driver works out their own"],
+    follow: ["getting drivers to stick to the plan", "extra miles and missed windows"],
+    cta: "plan and track your routes",
+  },
+  safety: {
+    reason: "So... the reason I'm calling... I work with a team that helps safety managers like you handle navigation with the truck's real dimensions built in, so drivers aren't routed under a low bridge or onto a restricted road. Most safety managers I talk to are already tracking hours, but not the height and weight of the truck on every route.",
+    ask: "Just out of curiosity, when routes get planned today, do the truck's height and weight get factored in, or does the driver check that on their own?",
+    opts: ["height and weight get factored in", "driver checks on their own"],
+    follow: ["tickets or low-bridge close calls", "drivers catching restricted roads on their own"],
+    cta: "keep trucks on safe roads",
+  },
+  dispatcher: {
+    reason: "So... the reason I'm calling... I work with a team that helps dispatchers like you handle navigation, so when an address changes, the driver gets the new route without a call, a text, and a wait. Most dispatchers I talk to can see where their trucks are, but not how they're getting there.",
+    ask: "Just out of curiosity, when an address changes today, do you send the new route through an app, or call and text the driver?",
+    opts: ["sends the new route through an app", "calls and texts the driver"],
+    follow: ["getting new routes to drivers quickly", "the time spent calling and texting drivers"],
+    cta: "get routes to your drivers",
+  },
+};
+function coldPick() { return COLD_ROLE[state.persona] || COLD_ROLE.owner; }
 
 // Shown on every objection card.
 const OBJECTION_RULE = "Pause. Acknowledge with a ledge line. Ask one question. Don't argue, and don't repeat the rebuttal.";
@@ -494,7 +528,7 @@ const flow = {
   opener: {
     title: "Opener",
     variants: [
-      { label: "Who's in charge?", script: "Hey, who's in charge of truck routing and dispatch at [company]?" },
+      { label: "Who's in charge?", script: "Hi [first name], this is [your name] with Trucker Path. Who's in charge of truck routing and dispatch over there?" },
       { label: "Permission", script: "Hi [first name], this is [your name] with Trucker Path. I know I'm calling out of the blue. Mind if I take 30 seconds to tell you why I called, and you can tell me if it's worth continuing?" },
       { label: "Tailored trigger", script: "Hi [first name], [your name] with Trucker Path. I saw [a specific trigger: new location, dispatcher job post, fleet growth], and that's actually why I'm calling. Mind if I take 30 seconds to tell you why, and you tell me if it's worth continuing?" },
       { label: "How have you been?", script: "Hi [first name], it's [your name] with Trucker Path. How have you been?" },
@@ -502,7 +536,7 @@ const flow = {
     note: "Sound confident and lead the call. With \"How have you been?\", don't make small talk: go straight to your reason after they answer.",
     guard: "Never open with \"Did I catch you at a bad time?\" It hands them an easy exit.",
     options: [
-      { label: "That's me", ack: "Oh, you are? Awesome. So yeah, it's just [your name] here.", next: "permission", tone: "go" },
+      { label: "That's me", ack: "Oh, you are? Awesome. So yeah, it's just [your name] here.", next: "reason", tone: "go" },
       { label: "\"May I know why you're calling?\"", next: "gatekeeper_why", tone: "warn" },
       { label: "Someone else is in charge", next: "gatekeeper", tone: "warn" },
       { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
@@ -510,26 +544,11 @@ const flow = {
       { label: "How did you get my number?", next: "obj:how_number", tone: "warn" },
     ],
   },
-  // Ask for the 30 seconds once they confirm they're the right person. Skipped if the opener already asked (see landOn).
-  permission: {
-    title: "Ask for 30 seconds",
-    script: "I'm with Trucker Path. I know I'm catching you cold here, mind if I take just half a minute? Tell you why I called, then you can let me know if it's relevant or not?",
-    note: "Wait for the yes. Once they say \"okay\", they've agreed to listen, and the pitch lands better.",
-    options: [
-      { label: "Sure, go ahead", ack: "Appreciate that.", next: "reason", tone: "go" },
-      { label: "What's this about?", ack: "Sure.", next: "reason", tone: "go" },
-      { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
-      { label: "Just send me an email", next: "obj:send_email", tone: "warn" },
-      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
-    ],
-  },
+  // Role first: the answer decides which version of the next three cards the rep reads.
   reason: {
-    title: "Why you're calling + their role",
-    script:
-      "So yeah, just a quick background... (deliberate) we're Trucker Path, one of the leading truck navigation apps in the US... used by over a million truck drivers every month. Fleets like Costco, Builders FirstSource and Wilson Logistics use it too... and plenty of smaller carriers.\n\n" +
-      "(slow) Just so I don't waste your time... what part of the operation do you look after? Are you more on the owner side, running the fleet, safety, or dispatch?",
-    note: "If you know their freight, swap in a fleet like theirs: reefer → Schuster or Hurricane Express, lumber and building → YellaWood, small dry van → Arka Express. Then pick the role they actually do; the next card is written for that person.",
-    guard: "Only name fleets from the customer list in the Sales Knowledge Base. Don't say what they pay for or quote results.",
+    title: "Role check",
+    script: "Just so I know who I'm talking to, what part of the operation do you look after? Owner, fleet manager or ops, safety, or dispatch?",
+    note: "Let them pick. The answer decides which version of the next card you read.",
     options: [
       { label: "Owner / Founder", ack: "Oh nice, got it. Appreciate that.", next: "pitch", tone: "go", persona: "owner" },
       { label: "Fleet manager / Ops", ack: "Got it, appreciate that.", next: "pitch", tone: "go", persona: "ops" },
@@ -542,123 +561,84 @@ const flow = {
     ],
   },
   pitch: {
-    title: "The pitch",
-    script:
-      "So... (slow) the reason I'm calling... most fleets I talk to already have an ELD, and it's great for hours, logs and seeing where the truck is.\n\n" +
-      "But here's the thing... the ELD tells you where the truck is, not whether it's on the right road. The driver's still routing on phone GPS... apps built for cars, not a loaded trailer.\n\n" +
-      "You know... one low bridge or restricted road, and you're paying for it. A ticket, a detour, a missed delivery window.\n\n" +
-      "What we actually find... the problem isn't the drivers. (pause) It's that nobody gave them a route built for the truck.\n\n" +
-      "So that's what NavPro does... and it works alongside your ELD, not instead of it. Dispatch sends a truck-safe route straight to the driver's app, and the driver sees parking and weigh stations ahead.\n\n" +
-      "I know you probably get a lot of calls about new apps, but would you be opposed to a free 10 to 15 minute demo, maybe later this week? Would [day] at [time] or [day] at [time] work better?",
-    byPersona: {
-      owner:
-        "So... (slow) the reason I'm calling... most owners I talk to already have an ELD, and it's great for hours, logs and seeing where the truck is.\n\n" +
-        "But here's the thing... the ELD tells you where the truck is, not whether it's on the right road. The driver's still routing on phone GPS... apps built for cars, not a loaded trailer.\n\n" +
-        "You know... one wrong turn onto a restricted road or a low bridge, and you're the one paying for it. A ticket, a detour, a missed delivery window.\n\n" +
-        "What we actually find... the problem isn't the drivers. (pause) It's that nobody gave them a route built for the truck.\n\n" +
-        "So that's what NavPro does... and it works alongside your ELD, not instead of it. Dispatch sends a truck-safe route straight to the driver's app, and after the trip, you can see the route you planned next to what actually got driven.\n\n" +
-        "I know you probably get a lot of calls about new apps, but would you be opposed to a free 10 to 15 minute demo, maybe later this week? Would [day] at [time] or [day] at [time] work better?",
-      ops:
-        "So... (slow) the reason I'm calling... most fleet managers I talk to already have an ELD, and it's great for hours, logs and seeing where the truck is.\n\n" +
-        "But here's the thing... the ELD shows you where the truck went, not the route it was supposed to take. You plan a route one way... and it gets driven another.\n\n" +
-        "You know... extra miles nobody planned, a missed window, a truck on a road it shouldn't be on. And you only hear about it later.\n\n" +
-        "What we actually find... the problem isn't the drivers. (pause) It's that the route never lived in one place the office controls.\n\n" +
-        "So that's what NavPro does... and it works alongside your ELD, not instead of it. Dispatch sends a truck-safe route straight to the driver's app, and you get planned versus actual, so off-route miles show up in a report instead of a phone call.\n\n" +
-        "I know you probably get a lot of calls about new apps, but would you be opposed to a free 10 to 15 minute demo, maybe later this week? Would [day] at [time] or [day] at [time] work better?",
-      safety:
-        "So... (slow) the reason I'm calling... most safety managers I talk to already have an ELD, and it's great for hours, logs and seeing where the truck is.\n\n" +
-        "But here's the thing... the ELD knows where the truck is, not how tall or heavy it is. The driver's still routing on phone GPS... apps built for cars, not a loaded trailer.\n\n" +
-        "You know... one low bridge or restricted road, and it's a ticket, a detour, an incident report.\n\n" +
-        "What we actually find... the problem isn't the drivers. (pause) It's that the truck's dimensions never make it into the route.\n\n" +
-        "So that's what NavPro does... and it works alongside your ELD, not instead of it. You set up the truck profile once, height, weight, length, axles, and every route dispatch sends is built around it.\n\n" +
-        "I know you probably get a lot of calls about new apps, but would you be opposed to a free 10 to 15 minute demo, maybe later this week? Would [day] at [time] or [day] at [time] work better?",
-      dispatcher:
-        "So... (slow) the reason I'm calling... most dispatchers I talk to already have an ELD, and it's great for seeing where the truck is.\n\n" +
-        "But here's the thing... the ELD shows you where the driver is, not how they're getting there. An address changes, and it's a call, a text, another call... then chasing the driver for an ETA.\n\n" +
-        "You know... one missed message, and the driver's headed to the wrong place, or onto a road the truck shouldn't be on.\n\n" +
-        "What we actually find... the problem isn't the drivers. (pause) It's that the route only lives in a text thread.\n\n" +
-        "So that's what NavPro does... and it works alongside your ELD, not instead of it. You send a truck-safe route straight to the driver's app from the office, and when something changes, you send the new one the same way.\n\n" +
-        "I know you probably get a lot of calls about new apps, but would you be opposed to a free 10 to 15 minute demo, maybe later this week? Would [day] at [time] or [day] at [time] work better?",
+    title: "Background + why you're calling",
+    build: () => COLD_BACKGROUND + "\n\n" + coldPick().reason + "\n\n" + coldPick().ask,
+    warnings: false,
+    note: "Ask the option question, then stop and let them pick. If you know their freight, swap in a fleet like theirs: reefer → Schuster or Hurricane Express, lumber and building → YellaWood, small dry van → Arka Express.",
+    guard: "Only name fleets from the customer list in the Sales Knowledge Base. Don't say what they pay or quote results.",
+    get options() {
+      const p = coldPick();
+      return [
+        { label: "Option 1: " + p.opts[0], next: "followup", tone: "go", set: { coldOpt: 0 } },
+        { label: "Option 2: " + p.opts[1], next: "followup", tone: "go", set: { coldOpt: 1 } },
+        { label: "We already have an ELD / routing tool", next: "obj:have_provider", tone: "warn" },
+        { label: "How much is it?", next: "obj:price", tone: "warn" },
+        { label: "Other priorities right now", next: "obj:priorities", tone: "warn" },
+        { label: "Just send me an email", next: "obj:send_email", tone: "warn" },
+        { label: "Not interested", next: "obj:not_interested", tone: "warn" },
+      ];
     },
-    note: "STOP after the ask. Let them answer. Do not fill the silence. If they want to know more first, go to the questions and ask again at the end.",
-    guard: "Never promise it prevents incidents or guarantees compliance. Describe what it does, not outcomes.",
+  },
+  followup: {
+    title: "How's that working out?",
+    build: () => "I see. And how's that working out so far, in terms of " + coldPick().follow[state.details.coldOpt || 0] + "?",
+    warnings: false,
+    note: "Let them answer. Don't answer for them. You'll play their answer back before the CTA.",
     options: [
-      { label: "Agrees a time", ack: "Perfect, you're locked in. So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute.", next: "fleet", tone: "go", demo: "later", sub: "Type the day, time and time zone in the notes box." },
-      { label: "Wants to know more first", ack: "Totally fair. Let me ask you a couple of quick ones then.", next: "fleet", tone: "warn", sub: "Go through the questions; you'll ask for the demo again at the end." },
+      { label: "Shares a problem", ack: "Yeah... [play back what they just said, in their words].", next: "cta", tone: "go" },
+      { label: "\"It's fine\"", next: "followup_fine", tone: "warn" },
       { label: "We already have an ELD / routing tool", next: "obj:have_provider", tone: "warn" },
-      { label: "How much is it?", next: "obj:price", tone: "warn" },
-      { label: "Other priorities right now", next: "obj:priorities", tone: "warn" },
       { label: "Just send me an email", next: "obj:send_email", tone: "warn" },
       { label: "Not interested", next: "obj:not_interested", tone: "warn" },
     ],
   },
-  fleet: {
-    title: "Fleet size and equipment",
-    script: "And how many trucks and drivers are you running right now, and what kind of equipment?",
-    note: "Note the equipment: flatbed, reefer, dry van, hazmat. It sets their truck profiles and their price tier.",
+  followup_fine: {
+    title: "They say it's fine",
+    script: "Good to hear. Where does it still slow you down?",
+    note: "One more open question, then listen.",
     options: [
-      { label: "3–10 trucks", ack: "Okay, perfect.", next: "discovery", tone: "go", sop: { fleet: "yes" }, size: "3-10" },
-      { label: "11–50 trucks", ack: "Okay, perfect.", next: "discovery", tone: "go", sop: { fleet: "yes" }, size: "11-50" },
-      { label: "50+ trucks", ack: "Oh nice, that's a solid operation.", next: "discovery", tone: "go", sop: { fleet: "yes" }, size: "50+" },
-      { label: `Fewer than ${CAMPAIGN.minTrucks} trucks`, next: "end_out_of_campaign", tone: "stop", sop: { fleet: "no" } },
-      { label: "Rather not say", ack: "No worries at all.", next: "discovery", tone: "warn", sop: { fleet: "unknown" } },
+      { label: "Names something", ack: "Yeah... [play back what they just said, in their words].", next: "cta", tone: "go" },
+      { label: "Really nothing", next: "obj:happy_2", tone: "warn" },
+      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
     ],
   },
-  discovery: {
-    title: "Find their pain",
-    discovery: true,
-    script: "Let me ask you a couple of quick ones, so I understand how things run on your side.",
-    note: "Ask 2 or 3 that fit, one at a time. Mark only what they confirm. Get a number if you can, like \"$3K a month on tolls\". The next card builds your demo pitch from what you mark.",
-    guard: "Don't suggest a problem they didn't raise. If nothing comes up, close politely.",
+  cta: {
+    title: "Ask for the consultation",
+    build: () => "The reason I asked is that we'd like to be part of how you " + coldPick().cta + ". So it makes sense to dive into it with one of our specialists. They'd show you how to send routes to your drivers, and how fuel and parking fit in. There's no commitment. If it's not a fit, you can keep us in your back pocket. Would you be open to a quick 15-minute consultation?\n\n(wait for the yes) Would this [day] or [day] work, or [day] or [day] next week?",
+    warnings: false,
+    note: "Say first: play back their answer, e.g. \"Yeah, that's the part most owners only notice after a ticket.\" Ask the yes/no question, then STOP. Offer the days only after they answer.",
+    guard: "Fuel plans are Business tier. Don't imply they come in the starting package.",
     options: [
-      { label: "They named a pain", ack: "Got it, appreciate you walking me through that.", next: "pain_dig", tone: "go" },
-      { label: "Nothing really came up", next: "polite_close", tone: "stop", bant: { need: "no" }, sop: { pain: "no" }, dq: "No Interest" },
-      { label: "We already use Samsara / Motive / an ELD", next: "obj:have_provider", tone: "warn" },
-    ],
-  },
-  decision: {
-    title: "Who decides",
-    script: "And if this looked like a fit, who else would need to weigh in?",
-    note: "Find out who decides and whether they'd join the demo.",
-    options: [
-      { label: "They make the decision", ack: "Perfect, thanks.", next: "timeline", tone: "go", bant: { authority: "yes" }, sop: { dm: "yes" } },
-      { label: "Someone else decides and can join", ack: "Got it, thanks.", next: "timeline", tone: "go", bant: { authority: "yes" }, sop: { dm: "yes" } },
-      { label: "Someone else decides, unsure they'll join", ack: "Got it, thanks for being upfront.", next: "timeline", tone: "warn", bant: { authority: "no" }, sop: { dm: "no" } },
-      { label: "I'd need to talk to the owner", next: "obj:need_owner", tone: "warn" },
-    ],
-  },
-  timeline: {
-    title: "Timing",
-    script: "And is fixing that something you're looking at in the next couple of months, or more down the road?",
-    note: "Note their real answer.",
-    guard: "If they aren't actively looking, don't push them into a date.",
-    options: [
-      { label: "Within 1–3 months", ack: "Makes sense.", next: "budget", tone: "go", bant: { timeline: "yes" }, sop: { timeline: "yes" } },
-      { label: "Later than 3 months", ack: "Makes sense, thanks.", next: "budget", tone: "warn", bant: { timeline: "no" }, sop: { timeline: "yes" } },
-      { label: "No timing, just looking", ack: "Totally fine.", next: "budget", tone: "warn", bant: { timeline: "no" }, sop: { timeline: "no" } },
-    ],
-  },
-  budget: {
-    title: "Budget",
-    script: "And if it solved that, is a monthly tool something you'd be open to, budget-wise?",
-    note: "If they ask for a number, use the \"How much is it?\" objection. It shows the starting price for their fleet size.",
-    options: [
-      { label: "Yes, open to it", ack: "Appreciate you being open about that.", next: "book", tone: "go", bant: { budget: "yes" }, sop: { budget: "yes" } },
-      { label: "Need to see the value first", ack: "Totally fair.", next: "book", tone: "warn", bant: { budget: "unknown" }, sop: { budget: "unknown" } },
+      { label: "Picks a day and time", ack: "Perfect, you're locked in. So our specialist can tailor it to you, just a couple of quick details.", next: "fleet", tone: "go", demo: "later", sub: "Type the day, time and time zone in the notes box." },
+      { label: "Neither day works", ack: "No problem, what day works better for you, this week or next?", next: "resume", tone: "warn", sub: "Stay here and get a day." },
+      { label: "Hesitant", next: "cta_hesitant", tone: "warn" },
+      { label: "Not this week or next", next: "callback", tone: "warn" },
       { label: "How much is it?", next: "obj:price", tone: "warn" },
-      { label: "No budget at all", next: "obj:price_2", tone: "warn" },
+      { label: "Send me info first", next: "obj:send_email", tone: "warn" },
+      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
     ],
   },
-  book: {
-    title: "Your demo pitch",
-    build: () => valuePitch(),
-    note: "This is built from the pains you marked. Read it back in their words where you can, then offer two specific slots.",
-    gate: true,
+  cta_hesitant: {
+    title: "Hesitant on the CTA",
+    script: "Totally fair, most people I call say the same thing. Is it the timing, or the 15 minutes?",
+    note: "Then wait. If it's the timing, offer a different day. If it's the 15 minutes, offer 10.",
     options: [
-      { label: "Picks a slot", ack: "Perfect.", next: "confirm", tone: "go" },
+      { label: "Picks a day and time", ack: "Perfect, you're locked in. So our specialist can tailor it to you, just a couple of quick details.", next: "fleet", tone: "go", demo: "later", sub: "Type the day, time and time zone in the notes box." },
+      { label: "Later, not now", next: "callback", tone: "warn" },
       { label: "Send me info first", next: "obj:send_email", tone: "warn" },
-      { label: "Need to check with the owner", next: "obj:need_owner", tone: "warn" },
-      { label: "Not now", next: "callback", tone: "warn" },
+      { label: "Still not interested", next: "obj:not_interested", tone: "warn" },
+    ],
+  },
+  fleet: {
+    title: "Quick details for the specialist",
+    script: "And how many trucks and drivers are you running right now, and what kind of equipment? And what are you using for your ELD?",
+    note: "Booked already? This is just for the AE handoff. Note the equipment (flatbed, reefer, dry van, hazmat) and their ELD in the notes box.",
+    options: [
+      { label: "3–10 trucks", ack: "Okay, perfect.", next: "after_fleet", tone: "go", sop: { fleet: "yes" }, size: "3-10" },
+      { label: "11–50 trucks", ack: "Okay, perfect.", next: "after_fleet", tone: "go", sop: { fleet: "yes" }, size: "11-50" },
+      { label: "50+ trucks", ack: "Oh nice, that's a solid operation.", next: "after_fleet", tone: "go", sop: { fleet: "yes" }, size: "50+" },
+      { label: `Fewer than ${CAMPAIGN.minTrucks} trucks`, next: "end_out_of_campaign", tone: "stop", sop: { fleet: "no" } },
+      { label: "Rather not say", ack: "No worries at all.", next: "after_fleet", tone: "warn", sop: { fleet: "unknown" } },
     ],
   },
   confirm: {
@@ -956,7 +936,7 @@ const flow = {
   driver: {
     title: "Driver on the line",
     script: "Got it. What do you use for navigation on the road, and what's the hardest part of it? And who looks after truck routing for the fleet? Would you be okay pointing me to them?",
-    note: "Drivers often use the app, but aren't buyers. Ask for an introduction, no pressure.",
+    note: "Drivers use the app, but they aren't buyers. Ask for an introduction, no pressure.",
     options: [
       { label: "Gives a name or intro", next: "end_referral", tone: "go" },
       { label: "Not comfortable sharing", next: "end_lost", tone: "stop", dq: "Not a decision maker" },
@@ -1100,7 +1080,7 @@ const objections = {
   },
   have_provider: {
     title: "We already use Samsara / Motive / an ELD",
-    script: "Makes sense, most fleets I call already have something. And honestly, this isn't a replacement... it connects with over 30 ELDs, like Samsara and Platform Science, and adds truck-safe routing, parking and fuel on top. What are you using, and what's still a pain with it?",
+    script: "Makes sense, most fleets I call already have something. And honestly, this isn't a replacement. It connects with over 30 ELDs, like Samsara and Platform Science, and adds truck-safe routing, parking and fuel on top. What are you using, and what's still a pain with it?",
     guard: "Don't knock the incumbent. Check the integration list before confirming their exact ELD works.",
     options: [
       { label: "Names a gap", ack: "That's really helpful, thanks.", next: "pain", tone: "go" },
@@ -1111,7 +1091,7 @@ const objections = {
   happy_1: {
     title: "Happy with what they have",
     hidden: true,
-    script: "That's great to hear, honestly... most of the fleets we work with like their ELD too. The ELD side is usually about hours and logs. What we add is the routing side: truck-safe routes, parking and fuel for your drivers. Out of curiosity, where do your drivers get their routes from today?",
+    script: "That's great to hear. Out of curiosity, where do your drivers get their routes from today?",
     note: "Rebuttal 1 of 2. Get curious about the routing gap, not the ELD.",
     guard: "Don't knock their ELD or claim what it can't do.",
     options: [
@@ -1123,7 +1103,7 @@ const objections = {
   happy_2: {
     title: "Still happy",
     hidden: true,
-    script: "Totally fair, and I'm not asking you to switch anything. Since it sits on top of what you've already got, would you be open to a quick look? It's just {demo}, and worst case you walk away with a couple of ideas for your drivers.",
+    script: "Totally fair, and I'm not asking you to switch anything. Would you be open to a quick look? It's just {demo}, and worst case you walk away with a couple of ideas for your drivers.",
     note: "Rebuttal 2 of 2. Make the ask small. If it's still a no, respect it.",
     options: [
       { label: "Okay, a quick look", ack: "Awesome, appreciate that.", next: "book", tone: "go" },
@@ -1132,7 +1112,7 @@ const objections = {
   },
   setup: {
     title: "Sounds like a lot to set up",
-    script: "Totally fair, nobody wants another project. It takes about two minutes to get started, there's a spreadsheet template for your trucks, and our onboarding team sets up the truck profiles with you. Would it help to see that on a quick demo?",
+    script: "Totally fair, nobody wants another project. It takes about two minutes to get started, there's a spreadsheet template for your trucks, and our onboarding team sets up the truck profiles with you. Would it help to see that on a quick consultation?",
     note: "\"Two minutes\" is Trucker Path's own marketing number. Present it that way if they push.",
     options: [
       { label: "Opens up", ack: "Appreciate you sharing that.", next: "continue", tone: "go" },
@@ -1143,7 +1123,7 @@ const objections = {
   setup_2: {
     title: "Still no time to set up",
     hidden: true,
-    script: "Makes sense, your time's tight. Out of curiosity, what's eating up most of the office's time right now? Because if it's chasing drivers or fixing routes, that's usually what this takes off your plate.",
+    script: "Makes sense, your time's tight. Out of curiosity, what's eating up most of the office's time right now?",
     note: "Rebuttal 2 of 2. Open question, then listen.",
     options: [
       { label: "Shares a pain", ack: "That's really helpful, thanks.", next: "pain", tone: "go" },
@@ -1154,7 +1134,7 @@ const objections = {
   },
   adoption: {
     title: "Drivers won't use another app",
-    script: "Totally fair, drivers hate new apps. This one's built for them... it works on Apple CarPlay, has offline maps, a Spanish version and night mode. And a lot of drivers already use Trucker Path for parking. Would it help if the demo showed exactly what the driver sees?",
+    script: "Totally fair, drivers hate new apps. This one's built for them. It works on Apple CarPlay, has offline maps, a Spanish version and night mode. Would it help if the consultation showed exactly what the driver sees?",
     options: [
       { label: "Opens up", ack: "Appreciate you sharing that.", next: "continue", tone: "go" },
       { label: "Open to a demo", ack: "Perfect.", next: "book", tone: "go" },
@@ -1174,7 +1154,7 @@ const objections = {
   },
   price: {
     title: "How much is it?",
-    script: "Fair question. For a fleet your size it starts from about {price}, no setup fee, and you can cancel anytime. The exact number depends on the package, and our specialist confirms it on the demo. Honestly, most fleets compare it with one ticket or one month of tolls.",
+    script: "Fair question. For a fleet your size it starts from about {price}, no setup fee, and you can cancel anytime. The exact number depends on the package, and our specialist confirms it on the consultation.",
     guard: "These are starting list prices. Fuel plans, IFTA and driver analytics are Business tier and cost more. The AE confirms the quote.",
     options: [
       { label: "That's reasonable", ack: "Glad that helps.", next: "book", tone: "go", bant: { budget: "yes" }, sop: { budget: "yes" } },
@@ -1186,7 +1166,7 @@ const objections = {
   price_2: {
     title: "No budget",
     hidden: true,
-    script: "Totally understand, budgets are tight for everyone right now. Just so I understand... is it that there's no budget at all, or that it would need to pay for itself? What's costing you the most right now, fuel, tolls, or tickets?",
+    script: "Totally understand, budgets are tight for everyone right now. Is it that there's no budget at all, or that it would need to pay for itself? What's costing you the most right now, fuel, tolls, or tickets?",
     note: "Rebuttal 2 of 2. Find out if it's a real no or a value question.",
     guard: "Don't promise savings or ROI numbers.",
     options: [
@@ -1299,8 +1279,8 @@ function fill(text) {
    move forward. "pain" moves one step further: they've opened up, so skip the
    question that was fishing for it. Everything later resumes the same card. */
 const AFTER_OBJECTION = {
-  continue: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "reason", permission: "reason" },
-  pain: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "reason", permission: "reason", reason: "pitch", pitch: "fleet" },
+  continue: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "reason" },
+  pain: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "reason", reason: "pitch", pitch: "cta", followup: "cta", followup_fine: "cta" },
 };
 
 function afterObjection(kind) {
@@ -1309,10 +1289,12 @@ function afterObjection(kind) {
 
 // Inbound uses its own booking cards; once the demo is booked, don't ask for it again.
 function routeFor(next) {
-  if (next === "after_pain") return state.mode === "inbound" ? "in_role" : "decision";
+  if (next === "after_pain") return state.mode === "inbound" ? "in_role" : "cta";
+  if (next === "after_fleet") return state.demo ? "confirm" : "cta";
   if (next === "after_trucks") return state.demo ? "in_why" : "in_book";
-  // Cold call: a demo agreed on the pitch skips the booking ask later.
-  if (state.mode !== "inbound" && next === "book" && state.demo) return "confirm";
+  // Cold call: "book" is the CTA until a demo is agreed; "timing's off" becomes a callback.
+  if (state.mode !== "inbound" && next === "book") return state.demo ? "confirm" : "cta";
+  if (state.mode !== "inbound" && next === "timeline") return "callback";
   if (state.mode !== "inbound" || (next !== "book" && next !== "timeline")) return next;
   if (state.demo) return "continue";
   return next === "book" ? "in_book" : "in_later";
@@ -1336,16 +1318,6 @@ function snapshot() { history.push(JSON.parse(JSON.stringify(state))); }
 
 function painOrder() { return PAIN_ORDER[state.persona] || PAIN_ORDER.default; }
 function chosenPains() { return state.pains.filter((k) => PAINS[k]); }
-
-function valuePitch() {
-  const lines = chosenPains().slice(0, 3).map((k) => PAINS[k].pitch);
-  if (lines.length) lines[0] = lines[0].replace(/^And (\w)/, (_, c) => c.toUpperCase());
-  const body = lines.length
-    ? lines.join("\n\n")
-    : "For a fleet like yours, the big win is usually getting your drivers on routes built for the truck, and seeing where everyone is without picking up the phone.";
-  return (lines.length ? "So based on what you told me...\n\n" : "") + body +
-    "\n\nHonestly, the easiest way to see it is a free 10 to 15 minute demo with one of our specialists, using your own trucks and routes. Would [day] at [time] or [day] at [time] work better, and what time zone are you in?";
-}
 
 function demoPreview() {
   // Their #1 goes first, then the rest in the order they came up.
@@ -1391,22 +1363,17 @@ function applyMarks(o) {
    answered, then on to booking. */
 const QUALIFY = {
   inbound: ["in_trucks", "in_why", "pain_dig", "pain_impact", "pain_confirm", "in_role", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz"],
-  outbound: ["fleet", "discovery", "pain_dig", "pain_impact", "pain_confirm", "decision", "timeline", "budget"],
+  outbound: ["fleet"],
 };
 
 function qualLeft() { return QUALIFY[state.mode].filter((id) => !state.answered.includes(id)); }
 
 // Where to land: skip qualification cards already answered, and don't wrap up an inbound demo that isn't booked.
 function landOn(id) {
-  // The Permission and Tailored trigger openers already asked for the 30 seconds.
-  if (id === "permission" && [1, 2].includes(state.variant.opener || 0)) {
-    if (!state.answered.includes(id)) state.answered.push(id);
-    id = "reason";
-  }
   // Booked before the truck count came up (e.g. "What's this about?"): ask it now.
   if (id === "in_why" && !state.answered.includes("in_trucks")) id = "in_trucks";
   if (QUALIFY[state.mode].includes(id) && state.answered.includes(id)) {
-    id = qualLeft()[0] || (state.mode === "inbound" ? "in_wrap" : "book");
+    id = qualLeft()[0] || (state.mode === "inbound" ? "in_wrap" : state.demo ? "confirm" : "cta");
   }
   // One pain named already answers "what's the #1 thing", so don't ask it again.
   if (id === "in_focus" && chosenPains().length === 1) {
