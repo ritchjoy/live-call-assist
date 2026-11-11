@@ -490,7 +490,7 @@ const PAINS = {
   ifta:       { label: "IFTA", qs: ["How do you handle IFTA reporting today?", "How much time does that take you each quarter?"],
                 pitch: "And IFTA... mileage gets tracked automatically, so it's not a month-end scramble.", business: true },
   eld:        { label: "Current setup and contracts", qs: ["What are your drivers using for navigation right now, and what do you like or not like about it?", "What's that missing for your operation?", "When does your current contract come up for renewal?"],
-                pitch: "And it works alongside your ELD... it connects with over 30 of them, so you're not replacing anything." },
+                pitch: "And it works alongside your ELD... it connects with the major ones, like Samsara and Motive, so you're not replacing anything." },
 };
 
 // Which questions to show first for each role.
@@ -523,6 +523,18 @@ const DEMO_LINES = {
 const INBOUND_FLOW = ["in_opener", "in_trucks", "in_book", "in_why", "pain_dig", "pain_impact", "pain_confirm", "in_role", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
 const MODES = { inbound: { label: "Inbound lead", main: INBOUND_FLOW }, outbound: { label: "Cold call", main: MAIN_FLOW } };
 
+
+// Setup questions: ask what their current setup does, never tell them what it can't do. Built from the
+// Trucker Path Features & Benefits overview (Nov 2026). Some ELDs already cover some of this, so ask.
+const SETUP_QS = {
+  profile: "When a driver gets a route, does it account for that truck's height, weight and axles?",
+  send: "Can dispatch build a multi-stop trip and send it straight to the driver's phone, or does it go out by call or text?",
+  actual: "After a trip, can you see the route you planned next to what actually got driven, and the extra miles?",
+  parking: "When a driver's running low on hours, can they see parking ahead, and whether it's filling up?",
+  hos: "When you assign a trip, can you see the driver's remaining hours right next to the route?",
+  lastmile: "When a driver goes to a new shipper, do they get the truck entrance and site notes, or do they call in?",
+  fuel: "Does your setup plan where the truck fuels, or does each driver decide?",
+};
 
 const flow = {
   opener: {
@@ -595,7 +607,8 @@ const flow = {
   followup_fine: {
     title: "They say it's fine",
     script: "Good to hear. Where does it still slow you down?",
-    note: "One more open question, then listen.",
+    asks: [["Or ask about their setup", [SETUP_QS.profile, SETUP_QS.actual, SETUP_QS.parking, SETUP_QS.lastmile]]],
+    note: "Credit what works, then ask one setup question. A \"no\" or \"not sure\" is the gap.",
     options: [
       { label: "Names something", ack: "Yeah... [play back what they just said, in their words].", next: "cta", tone: "go" },
       { label: "Really nothing", next: "obj:happy_2", tone: "warn" },
@@ -864,7 +877,7 @@ const flow = {
   in_nav: {
     title: "Current navigation",
     script: "And what are your drivers using for navigation right now, and what do you like or not like about it?",
-    asks: [["Then", ["What's that missing for your operation?", "When does your current contract come up for renewal?"]]],
+    asks: [["Then ask about their setup", [SETUP_QS.profile, SETUP_QS.send, SETUP_QS.actual, "When does your current contract come up for renewal?"]]],
     note: "Know their current setup and contract date. Respect whatever they use; never knock it. Note the renewal date if they have one.",
     options: [
       { label: "Phone / Google Maps", ack: "Got it, a lot of fleets start there.", next: "in_tms", tone: "go", set: { nav: "Phone / Google Maps" } },
@@ -1026,10 +1039,11 @@ const flow = {
 const objections = {
   not_interested: {
     title: "Not interested",
-    script: "Totally fair, most people I call say the same thing before they know why I'm calling. Can I ask just one thing: is that because the way you handle routing works well today, or it's just not a priority right now?",
-    note: "Rebuttal 1 of 2. Get curious, don't argue.",
+    script: "Totally fair, I hear that a lot before people know why I'm calling. Just one quick question, so I'm not calling you about the wrong thing... how do your drivers get their routes today? Does the office send them, or does each driver use their own phone GPS?",
+    note: "Rebuttal 1 of 2. Ask about their setup, not their opinion. Their answer shows you where the gap is.",
     options: [
-      { label: "Opens up", ack: "Appreciate you sharing that.", next: "pain", tone: "go" },
+      { label: "Drivers use their own GPS", ack: "Got it, that's really common.", next: "pain", tone: "go" },
+      { label: "Office sends the routes", next: "obj:ni_setup", tone: "warn" },
       { label: "Not a priority", next: "obj:ni_priority", tone: "warn" },
       { label: "Declines to talk", next: "obj:ni_declines", tone: "warn" },
       { label: "Don't call me again", next: "end_dnc", tone: "stop" },
@@ -1060,10 +1074,16 @@ const objections = {
   },
   priorities: {
     title: "Other priorities right now",
-    script: "Totally fair, most people I call have a full plate. Is routing just further down the list for now, or is it something you'd want to look at later this year?",
-    note: "Rebuttal 1 of 2.",
+    script: "Totally fair, most people I call have a full plate. Can I ask, what's at the top of the list right now?",
+    asks: [["If it ties in, ask", [
+      "Fuel costs → " + SETUP_QS.fuel,
+      "Late loads / customers → " + SETUP_QS.actual,
+      "Drivers / turnover → What do your drivers complain about most on the road: parking, routes, or finding the right gate?",
+      "Tickets / safety / insurance → " + SETUP_QS.profile,
+    ]]],
+    note: "Rebuttal 1 of 2. Their priority often ties back to the road: fuel, drivers, late loads, tickets. If it does, ask the matching setup question.",
     options: [
-      { label: "Opens up", ack: "Appreciate you sharing that.", next: "pain", tone: "go" },
+      { label: "Names something it ties into", ack: "Got it, appreciate you sharing that.", next: "pain", tone: "go" },
       { label: "Later this year", next: "callback", tone: "warn", bant: { timeline: "no" } },
       { label: "Not at all", next: "obj:prio_2", tone: "warn" },
     ],
@@ -1081,9 +1101,11 @@ const objections = {
   },
   send_email: {
     title: "Just send me an email",
-    script: "Happy to. So I send something relevant, what's your biggest priority on routing right now? And what's the best work email, and is it okay if I follow up once you've had a look?",
+    script: "Happy to. So I send you the right thing and not a generic brochure, one quick question on your setup... does the office send routes to the drivers, or does each driver find their own? And what's the best work email, and is it okay if I follow up once you've had a look?",
+    note: "Their setup answer decides what goes in the email. If they start explaining their setup, keep the conversation going.",
     guard: "An email request isn't a demo or marketing consent. Don't say it's sent unless it actually was.",
     options: [
+      { label: "Opens up about their setup", ack: "Got it, that really helps.", next: "pain", tone: "go" },
       { label: "Open to a short call instead", ack: "Love that, appreciate it.", next: "book", tone: "go" },
       { label: "Happy to keep talking", ack: "Appreciate that.", next: "continue", tone: "go" },
       { label: "Just the email", next: "end_email", tone: "warn" },
@@ -1091,30 +1113,33 @@ const objections = {
   },
   have_provider: {
     title: "We already use Samsara / Motive / an ELD",
-    script: "Makes sense, most fleets I call already have something. And honestly, this isn't a replacement. It connects with over 30 ELDs, like Samsara and Platform Science, and adds truck-safe routing, parking and fuel on top. What are you using, and what's still a pain with it?",
-    guard: "Don't knock the incumbent. Check the integration list before confirming their exact ELD works.",
+    script: "That's good, most fleets I call already have an ELD, and you need one. We're not replacing it. NavPro works alongside it. Just so I understand your setup... when dispatch plans a trip, does your system build the route around the truck's height and weight and send it to the driver, or does the driver work that out?",
+    note: "Rebuttal 1 of 2. Credit the ELD, then ask what their setup actually does. Type which ELD they're on in the notes.",
+    guard: "Don't knock the incumbent. Some ELDs already offer truck navigation, parking or dispatch, so ask, don't assume. Check the integration list before confirming their ELD connects.",
     options: [
-      { label: "Names a gap", ack: "That's really helpful, thanks.", next: "pain", tone: "go" },
+      { label: "Driver works it out / not sure", ack: "Got it, that's the part we add on top of the ELD.", next: "pain", tone: "go" },
+      { label: "Their ELD does navigation", next: "obj:eld_nav", tone: "warn" },
       { label: "Already a Trucker Path / NavPro customer", next: "end_existing", tone: "warn" },
-      { label: "Happy with what they have", next: "obj:happy_1", tone: "warn" },
+      { label: "Happy, don't need anything", next: "obj:happy_1", tone: "warn" },
     ],
   },
   happy_1: {
     title: "Happy with what they have",
     hidden: true,
-    script: "That's great to hear. Out of curiosity, where do your drivers get their routes from today?",
-    note: "Rebuttal 1 of 2. Get curious about the routing gap, not the ELD.",
-    guard: "Don't knock their ELD or claim what it can't do.",
+    script: "That's great that it's working well for you. Can I ask one thing about your setup... after a trip, can you see the route you planned next to what actually got driven, and the extra miles?",
+    asks: [["Or ask the one that fits their role", [SETUP_QS.parking, SETUP_QS.hos, SETUP_QS.lastmile, SETUP_QS.profile]]],
+    note: "Rebuttal 1 of 2. Credit what works, then ask about one thing their ELD may not cover. Owners and ops: planned vs actual. Safety: truck profiles. Dispatch: hours and parking.",
+    guard: "Don't knock their ELD or claim what it can't do. Ask, don't tell.",
     options: [
-      { label: "Phone GPS / car apps / drivers figure it out", ack: "Yeah, that's exactly the gap we fill.", next: "pain", tone: "go" },
+      { label: "No / not really", ack: "Got it, appreciate you being straight with me.", next: "pain", tone: "go" },
       { label: "Opens up about another pain", ack: "That's really helpful, thanks.", next: "pain", tone: "go" },
-      { label: "Still happy, no need", next: "obj:happy_2", tone: "warn" },
+      { label: "Yes, we have that", next: "obj:happy_2", tone: "warn" },
     ],
   },
   happy_2: {
     title: "Still happy",
     hidden: true,
-    script: "Totally fair, and I'm not asking you to switch anything. Would you be open to a quick look? It's just {demo}, and worst case you walk away with a couple of ideas for your drivers.",
+    script: "Sounds like you've got a solid setup, honestly. I'm not asking you to switch anything. Would you be open to a quick look anyway, just {demo}? Worst case, you see how other fleets handle routing and parking on top of their ELD.",
     note: "Rebuttal 2 of 2. Make the ask small. If it's still a no, respect it.",
     options: [
       { label: "Okay, a quick look", ack: "Awesome, appreciate that.", next: "book", tone: "go" },
@@ -1123,11 +1148,11 @@ const objections = {
   },
   setup: {
     title: "Sounds like a lot to set up",
-    script: "Totally fair, nobody wants another project. It takes about two minutes to get started, there's a spreadsheet template for your trucks, and our onboarding team sets up the truck profiles with you. Would it help to see that on a quick consultation?",
-    note: "\"Two minutes\" is Trucker Path's own marketing number. Present it that way if they push.",
+    script: "Totally fair, nobody wants another project. It takes about two minutes to get started, there's a spreadsheet template for your trucks, and our onboarding team sets up the truck profiles with you. Can I ask, where do your trucks' details live today: height, weight, hazmat? A spreadsheet, your ELD, or in the drivers' heads?",
+    note: "\"Two minutes\" is Trucker Path's own marketing number. Present it that way if they push. If their truck details are already in a spreadsheet, setup is mostly an upload.",
     options: [
-      { label: "Opens up", ack: "Appreciate you sharing that.", next: "continue", tone: "go" },
-      { label: "Open to a demo", ack: "Perfect.", next: "book", tone: "go" },
+      { label: "Shares their setup", ack: "Got it, then the template should make it quick.", next: "continue", tone: "go" },
+      { label: "Open to a consultation", ack: "Perfect.", next: "book", tone: "go" },
       { label: "Still no time for it", next: "obj:setup_2", tone: "warn" },
     ],
   },
@@ -1135,6 +1160,7 @@ const objections = {
     title: "Still no time to set up",
     hidden: true,
     script: "Makes sense, your time's tight. Out of curiosity, what's eating up most of the office's time right now?",
+    asks: [["If they're stuck, ask", ["How many calls a day go to drivers just to check where they are or send a new address?", SETUP_QS.send]]],
     note: "Rebuttal 2 of 2. Open question, then listen.",
     options: [
       { label: "Shares a pain", ack: "That's really helpful, thanks.", next: "pain", tone: "go" },
@@ -1145,10 +1171,13 @@ const objections = {
   },
   adoption: {
     title: "Drivers won't use another app",
-    script: "Totally fair, drivers hate new apps. This one's built for them. It works on Apple CarPlay, has offline maps, a Spanish version and night mode. Would it help if the consultation showed exactly what the driver sees?",
+    script: "Totally fair, drivers hate new apps. This one's built for them: it works with CarPlay and Android Auto, has offline maps, Spanish and night mode. Can I ask what your drivers are using on the road right now?",
+    note: "Rebuttal 1 of 2. Their answer tells you what the driver would be switching from.",
     options: [
+      { label: "Phone GPS / Google Maps", ack: "Got it, a lot of drivers start there.", next: "pain", tone: "go" },
+      { label: "Free Trucker Path app", next: "obj:uses_tp", tone: "go" },
       { label: "Opens up", ack: "Appreciate you sharing that.", next: "continue", tone: "go" },
-      { label: "Open to a demo", ack: "Perfect.", next: "book", tone: "go" },
+      { label: "Open to a consultation", ack: "Perfect.", next: "book", tone: "go" },
       { label: "Still a no", next: "obj:adoption_2", tone: "warn" },
     ],
   },
@@ -1165,10 +1194,10 @@ const objections = {
   },
   price: {
     title: "How much is it?",
-    script: "Fair question. For a fleet your size it starts from about {price}, no setup fee, and you can cancel anytime. The exact number depends on the package, and our specialist confirms it on the consultation.",
+    script: "Fair question. For a fleet your size it starts from about {price}, no setup fee, and you can cancel anytime. The exact number depends on the package, and our specialist confirms it on the consultation. So I point you to the right one... is it mainly truck routing you need, or fuel planning and parking too?",
     guard: "These are starting list prices. Fuel plans, IFTA and driver analytics are Business tier and cost more. The AE confirms the quote.",
     options: [
-      { label: "That's reasonable", ack: "Glad that helps.", next: "book", tone: "go", bant: { budget: "yes" }, sop: { budget: "yes" } },
+      { label: "Tells you what they need", ack: "Got it, that helps.", next: "book", tone: "go", bant: { budget: "yes" }, sop: { budget: "yes" } },
       { label: "Need to see the value first", ack: "Totally fair.", next: "book", tone: "go", bant: { budget: "unknown" }, sop: { budget: "unknown" } },
       { label: "Timing's off", next: "timeline", tone: "warn" },
       { label: "No ability to spend", next: "obj:price_2", tone: "warn" },
@@ -1210,18 +1239,22 @@ const objections = {
   },
   drivers_gps: {
     title: "Drivers use phones / GPS",
-    script: "Makes sense, a lot of fleets I call start there. Does the office set up truck profiles and send routes to drivers, or does each driver pick their own route?",
+    script: "Makes sense, a lot of fleets start there. Quick one... does that GPS know each truck's height and weight, or is the driver checking clearances on their own?",
+    asks: [["Then ask", [SETUP_QS.send, SETUP_QS.parking]]],
+    note: "Rebuttal 1 of 2. Ask about their workflow, not their device.",
     guard: "Talk about their workflow, not replacing devices. No competitor claims.",
     options: [
-      { label: "Office manages routes", ack: "Got it, thanks.", next: "pain", tone: "go" },
-      { label: "Drivers choose, open to talking", ack: "Got it, appreciate that.", next: "pain", tone: "go" },
+      { label: "Driver checks on their own", ack: "Got it, that's really common.", next: "pain", tone: "go" },
+      { label: "Not sure", ack: "Got it, that's honestly most fleets I talk to.", next: "pain", tone: "go" },
+      { label: "It's a truck GPS, it handles it", next: "obj:gps_2", tone: "warn" },
       { label: "No interest", next: "obj:gps_2", tone: "warn" },
     ],
   },
   gps_2: {
     title: "Happy with phones / GPS",
     hidden: true,
-    script: "Totally fair. Can I ask... has a driver ever ended up on a road or under a bridge they shouldn't have been on? How did that get handled?",
+    script: "Good to hear. Can I ask... has a driver ever ended up on a road or under a bridge they shouldn't have been on? How did that get handled?",
+    asks: [["Or ask", [SETUP_QS.send, SETUP_QS.actual]]],
     note: "Rebuttal 2 of 2. Open question, then listen.",
     options: [
       { label: "Yes, shares a story", ack: "Yeah, that's exactly what this helps with.", next: "pain", tone: "go" },
@@ -1249,6 +1282,46 @@ const objections = {
       { label: "Callback with the owner", next: "callback", tone: "warn" },
       { label: "Will pass on an email", next: "end_email", tone: "warn" },
       { label: "Still a no", next: "polite_close", tone: "stop", dq: "No Decision-making Power" },
+    ],
+  },
+  ni_setup: {
+    title: "Office already sends routes",
+    hidden: true,
+    script: "Nice, that's more organized than most fleets I talk to. Does that route account for each truck's height and weight, or is that still on the driver to check?",
+    asks: [["Or ask", [SETUP_QS.actual, SETUP_QS.parking, SETUP_QS.lastmile]]],
+    note: "Rebuttal 2 of 2. Credit their setup first, then ask what it covers. A \"no\" or \"not sure\" is the gap.",
+    options: [
+      { label: "Driver still checks / not sure", ack: "Got it, that's usually where the gap is.", next: "pain", tone: "go" },
+      { label: "Open to a quick look", ack: "Awesome, appreciate that.", next: "book", tone: "go" },
+      { label: "Their setup covers all of it", next: "polite_close", tone: "stop", dq: "No Interest" },
+    ],
+  },
+  eld_nav: {
+    title: "Our ELD already does navigation",
+    script: "That's great that your setup has navigation built in, a lot of fleets don't. Can I ask... does it let dispatch build a multi-stop trip and send it straight to the driver, or does the driver put the stops in?",
+    asks: [["Then ask", [
+      "Does it use each truck's height, weight and axles, or one setting for the whole fleet?",
+      SETUP_QS.actual,
+      SETUP_QS.parking,
+      "Can you save truck entrances and site notes for your regular shippers?",
+    ]]],
+    note: "Rebuttal 1 of 2. Some ELDs do have truck navigation. Don't argue it: ask what it covers, one question at a time.",
+    guard: "Don't say their ELD's navigation is generic or can't do truck routing. Ask what it does.",
+    options: [
+      { label: "Something's missing", ack: "Got it, that's really helpful.", next: "pain", tone: "go" },
+      { label: "It covers all of it", next: "obj:happy_2", tone: "warn" },
+      { label: "Not interested", next: "obj:happy_2", tone: "warn" },
+    ],
+  },
+  uses_tp: {
+    title: "Our drivers already use Trucker Path",
+    script: "Oh nice, so your drivers already know us. That's the driver app. NavPro is the fleet side of it. Can I ask, does the office send them their routes now, or is each driver planning trips on their own in the app?",
+    note: "The driver app (Free, Gold, Diamond) isn't NavPro. Find out who pays for what before you assume they're a customer.",
+    options: [
+      { label: "Drivers plan on their own", ack: "Got it. That's what NavPro adds: dispatch sends the route to the app they already use.", next: "pain", tone: "go" },
+      { label: "Office sends routes another way", ack: "Got it, appreciate that.", next: "pain", tone: "go" },
+      { label: "Already on NavPro", next: "end_existing", tone: "warn" },
+      { label: "Not interested", next: "obj:happy_2", tone: "warn" },
     ],
   },
   dnc: {
