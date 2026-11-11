@@ -431,7 +431,7 @@ const NEVER_PROMISE = [
 ];
 
 // A cold call sells the next conversation. Keep discovery to what the booking checklist needs; the deep dive is the demo.
-const MAIN_FLOW = ["opener", "fleet", "reason", "pitch", "setup_q", "setup_q2", "cta", "details", "confirm"];
+const MAIN_FLOW = ["opener", "fleet", "reason", "pitch", "setup_q", "setup_q2", "cta", "details", "challenge", "confirm"];
 
 // Cold call v3, steps 4 to 7: one version per role.
 // help = background line. q1 = first setup question; opts = its two answers; q2 = follow-up per answer;
@@ -682,8 +682,21 @@ const flow = {
     script: "And what kind of equipment are you running, and what are you using for your ELD?",
     note: "Booked already? This is just for the AE handoff. Type the equipment (flatbed, reefer, dry van, hazmat) and their ELD in the notes box.",
     options: [
-      { label: "Shares equipment and ELD", ack: "Okay, perfect.", next: "confirm", tone: "go" },
-      { label: "Rather not say", ack: "No worries at all.", next: "confirm", tone: "warn" },
+      { label: "Shares equipment and ELD", ack: "Okay, perfect.", next: "challenge", tone: "go" },
+      { label: "Rather not say", ack: "No worries at all.", next: "challenge", tone: "warn" },
+    ],
+  },
+  challenge: {
+    title: "Their biggest challenge",
+    build: () => "Just one more thing... what's the biggest challenge in your day as " + ({ owner: "an owner", ops: "a fleet manager", safety: "a safety manager", dispatcher: "a dispatcher" }[state.persona] || "someone running the trucks") + "? Anything that comes to mind.",
+    asks: [["If they answer, dig one level", ["Tell me more about that. How often does that come up?", "What does that cost you, in time or money?"]]],
+    warnings: false,
+    painPick: ["fuel", "tolls", "restricted", "tracking", "parking", "lastmile", "insurance", "ifta"],
+    note: "Let them talk. Type their answer in their own words in the notes box: it's the #1 pain for the AE handoff. Tick what they mention.",
+    guard: "Don't pitch a fix here. The demo is booked; this is for the specialist.",
+    options: [
+      { label: "Shares a challenge", ack: "That's really helpful. I'll make sure our specialist covers that.", next: "confirm", tone: "go" },
+      { label: "Nothing comes to mind", ack: "No worries at all.", next: "confirm", tone: "warn" },
     ],
   },
   confirm: {
