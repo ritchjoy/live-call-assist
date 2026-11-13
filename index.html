@@ -445,7 +445,7 @@ const COLD_ROLE = {
     opts: ["Phone GPS", "Something built for trucks"],
     q2: ["Is that the same app for every driver, or does each one pick their own?", "Does it take the truck's height and weight into the route, yes or no?"],
     feature: ["you can build the route around the truck's dimensions and send it straight to the driver's app", "every route is built on a truck profile, with the truck's height and weight, and sent straight to the driver"],
-    more: "and how you'd see the route you planned next to what actually got driven",
+    more: "and the driver performance report, where you see which drivers stay on the planned route and who's adding extra miles",
   },
   ops: {
     help: "We help fleet managers like you plan routes once, send them to drivers, and compare planned versus actual.",
@@ -453,7 +453,7 @@ const COLD_ROLE = {
     opts: ["Office plans it", "Drivers work it out"],
     q2: ["Does the route go to the driver's phone, or to a dispatch system?", "Is there a set route for each trip before the driver leaves, yes or no?"],
     feature: ["you can send the planned route to the driver and see planned versus actual after the trip", "you can set the route before the trip and see the extra miles and off-route alerts"],
-    more: "and how saved locations work, with truck entrances and site notes for your shippers",
+    more: "and how you decide whether drivers plan their own routes or follow the one you send, with planned versus actual for every trip",
   },
   safety: {
     help: "We help safety managers like you keep trucks off roads and away from clearances they can't handle, with truck dimensions built into every route.",
@@ -461,7 +461,7 @@ const COLD_ROLE = {
     opts: ["Yes, factored in", "No / not really"],
     q2: ["Is that profile set up on every truck, yes or no?", "Is there a truck profile saved anywhere, like a spreadsheet or a system, yes or no?"],
     feature: ["every truck gets a profile with height, weight, length and axles, and every route is built around it", "you save a truck profile once, every route is built around it, and the driver gets restriction warnings"],
-    more: "and how avoidance areas let you block roads you don't want your trucks on",
+    more: "and how avoidance areas let you block roads you don't want your trucks on, plus the driver performance report to see who goes off the planned route",
   },
   dispatcher: {
     help: "We help dispatchers like you send truck-safe routes straight to the driver's app, and resend them when something changes.",
@@ -469,7 +469,7 @@ const COLD_ROLE = {
     opts: ["Call and text", "Sent from the desk"],
     q2: ["Is there a way to send a route from the desk to the driver's phone, yes or no?", "Do you track the trucks in your ELD, yes or no?"],
     feature: ["you can send the new route from the office in one step, instead of a call, a text and a wait", "you can send the route from the office straight to the driver's app, and resend it when something changes"],
-    more: "and how in-app messaging and trip documents keep it all in one place",
+    more: "and how the BOL and proof of delivery sit right on the trip, with in-app messaging, so nothing gets lost",
   },
 };
 function coldPick() { return COLD_ROLE[state.persona] || COLD_ROLE.owner; }
@@ -640,8 +640,15 @@ const flow = {
     title: "Feature bridge + consultation ask",
     build: () => "[Repeat their setup in their words.] The reason I ask is, with NavPro, " + coldPick().feature[state.details.coldOpt || 0] + ". So I think it makes sense to do a quick 15-minute consultation with one of our specialists. They'd show you how to send routes straight to your drivers, using your trucks as the example, " + coldPick().more + ".\n\nWould you be available this coming Wednesday or Friday? If not, maybe Tuesday next week? Or maybe some time today?",
     warnings: false,
-    note: "Read the feature line for their answer, then the days. Offer the days, then STOP and let them pick. If those days have passed, swap in the next ones. Don't bring up fuel or ELD features unless they raised them. Only add \"There's no commitment, if it's not a fit you can keep us in your back pocket\" if the team has confirmed it.",
-    guard: "Never promise results, savings or compliance.",
+    note: "Read the feature line for their answer, then the days. Offer the days, then STOP and let them pick. If those days have passed, swap in the next ones. Don't bring up fuel or ELD features unless they raised them. If they ask what else it does, give one line from below, then go straight back to the days. Don't tour every feature: that's the specialist's job. Driver performance reports and approved fuel stops are Business tier, so don't promise them on a plan. Only add \"There's no commitment, if it's not a fit you can keep us in your back pocket\" if the team has confirmed it.",
+    guard: "Never promise results, savings or compliance. No price, and no dollar figures for what they're losing.",
+    asks: [["If they ask what else it does (one line, then back to the days)", [
+      "Driver performance: \"You'd see each driver's route compliance and extra miles, so you know who's costing you.\"",
+      "Driver choice: \"Your drivers can still plan their own routes if you like. You decide who can.\"",
+      "Trips: \"Every trip in one place: scheduled, in transit and completed.\"",
+      "Documents: \"The BOL and proof of delivery get uploaded to the trip, so nothing gets lost.\"",
+      "Fuel, only if they raised it: \"You can set which fuel stops your drivers see, like the ones where you get a discount.\"",
+    ]]],
     options: [
       { label: "Picks a day and time", ack: "Perfect, you're locked in. So our specialist can tailor it to you, just a couple of quick details.", next: "details", tone: "go", demo: "later", sub: "Type the day, time and time zone in the notes box." },
       { label: "Neither day works", ack: "No problem, what day works better for you, this week or next?", next: "resume", tone: "warn", sub: "Stay here and get a day." },
