@@ -528,11 +528,25 @@ const DEMO_LINES = {
 
 // Inbound lead flow (they came to us): their priority, truck count (decides fleet vs owner-operator), book the demo, then qualify.
 const INBOUND_FLOW = ["in_opener", "in_trucks", "in_book", "in_why", "pain_dig", "pain_impact", "pain_confirm", "in_role", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
-const MODES = { inbound: { label: "Inbound lead", main: INBOUND_FLOW }, outbound: { label: "Cold call", main: MAIN_FLOW } };
+const MODES = { inbound: { label: "Inbound lead", main: INBOUND_FLOW, start: "in_source" }, outbound: { label: "Cold call", main: MAIN_FLOW, start: "out_source" } };
 
 
 // Setup questions: ask what their current setup does, never tell them what it can't do. Built from the
 // Trucker Path Features & Benefits overview (Nov 2026). Some ELDs already cover some of this, so ask.
+// Lead-source openers share the interest question's answers and the usual exits.
+const INTEREST_OPTS = [
+  { label: "Tracking trucks and drivers", ack: "Got it, that's a big one.", next: "in_trucks", tone: "go", pains: ["tracking"], set: { interest: "tracking" } },
+  { label: "Safe routes, fuel and tolls", ack: "Got it, that's a big one.", next: "in_trucks", tone: "go", pains: ["restricted", "fuel", "tolls"], set: { interest: "routes" } },
+  { label: "Both", ack: "Got it, love that.", next: "in_trucks", tone: "go", pains: ["tracking", "restricted", "fuel", "tolls"], set: { interest: "both" } },
+  { label: "Not sure / just looking", ack: "Totally fair.", next: "in_trucks", tone: "warn" },
+];
+const INBOUND_EXITS = [
+  { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
+  { label: "Company driver, doesn't run trucks", next: "in_driver_only", tone: "stop" },
+];
+// Sources whose form already captured fleet size: confirm it instead of asking cold.
+const FORM_SIZE = ["home", "cs", "tlweb", "partner", "fb", "driver"];
+
 const SETUP_QS = {
   profile: "When a driver gets a route, does it account for that truck's height, weight and axles?",
   send: "Can dispatch build a multi-stop trip and send it straight to the driver's phone, or does it go out by call or text?",
@@ -678,7 +692,7 @@ const flow = {
       { label: "3–10 trucks", ack: "Okay, perfect.", next: "reason", tone: "go", sop: { fleet: "yes" }, size: "3-10" },
       { label: "11–50 trucks", ack: "Okay, perfect.", next: "reason", tone: "go", sop: { fleet: "yes" }, size: "11-50" },
       { label: "50+ trucks", ack: "Oh nice, that's a solid operation.", next: "reason", tone: "go", sop: { fleet: "yes" }, size: "50+" },
-      { label: `Fewer than ${CAMPAIGN.minTrucks} trucks`, next: "end_out_of_campaign", tone: "stop", sop: { fleet: "no" } },
+      { label: `Fewer than ${CAMPAIGN.minTrucks} trucks`, next: "small_fleet", tone: "stop", sop: { fleet: "no" }, size: "1-2" },
       { label: "Rather not say", ack: "No worries at all.", next: "reason", tone: "warn", sop: { fleet: "unknown" } },
       { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
       { label: "Not interested", next: "obj:not_interested", tone: "warn" },
@@ -712,6 +726,173 @@ const flow = {
     note: "For the AE handoff, note: fleet size, truck types, their #1 pain in their own words (with a dollar amount if you got one), and their ELD/TMS.",
     guard: "Don't call it booked until the event exists and the invite has gone to the prospect and the AE.",
     options: [{ label: "Event created, invite sent", next: "end_booked", tone: "go" }],
+  },
+  /* ---------- Lead source: picked before dialing. Each source gets its own opener (Lead Journey playbook), then joins the main flow. ---------- */
+  in_source: {
+    title: "Lead source",
+    pre: true,
+    script: "Before you dial, open the contact in HubSpot and check Trucker Path Source. Pick it below: each one opens differently.",
+    note: "Don't read this out. P1 sources (Homepage, TP App, Incomplete Trial, CS referral): call within 15 minutes. If the source is blank or not listed, pick \"Other / not sure\".",
+    guard: "PLG Free Trial (an active trial with a card on file) isn't a sales call. Hand it to the CSM team, and don't hard-sell someone who's already trying it.",
+    options: [
+      { label: "Homepage Form", sub: "P1 · asked for a demo on the website", next: "in_op_home", tone: "go", set: { source: "Homepage Form", srcKey: "home" } },
+      { label: "TP App Lead Form", sub: "P1 · asked for a team plan in the app", next: "in_op_tpapp", tone: "go", set: { source: "TP App Lead Form", srcKey: "tpapp" } },
+      { label: "NavPro Incomplete Trial", sub: "P1 · started signup, stopped at the card step", next: "in_op_trial", tone: "go", set: { source: "NavPro Incomplete Trial", srcKey: "trial" } },
+      { label: "Affiliate - CS", sub: "P1 · referred by our CSM", next: "in_op_cs", tone: "go", set: { source: "Affiliate - CS", srcKey: "cs" } },
+      { label: "Truckloads-Web", sub: "P2 · asked for a demo on the Truckloads dispatch page", next: "in_op_tlweb", tone: "go", set: { source: "Truckloads-Web", srcKey: "tlweb" } },
+      { label: "Affiliate - Partner", sub: "P2 · NAIT, a trucking school, Northland…", next: "in_op_partner", tone: "go", set: { source: "Affiliate - Partner", srcKey: "partner" } },
+      { label: "Facebook Ads", sub: "P2 · filled out a Facebook ad form", next: "in_op_fb", tone: "go", set: { source: "Facebook Ads", srcKey: "fb" } },
+      { label: "Affiliate - Driver", sub: "P3 · a driver referred them", next: "in_op_driver", tone: "go", set: { source: "Affiliate - Driver", srcKey: "driver" } },
+      { label: "Other / not sure", sub: "Uses the general inbound opener", next: "in_opener", tone: "warn", set: { source: "Other / not sure" } },
+    ],
+  },
+  in_op_home: {
+    title: "Opener: Homepage Form",
+    stepAs: "in_opener",
+    script: "Hey [first name], it's [your name] from Trucker Path. You requested a demo for your fleet on our website, so I wanted to get that set up for you. Before I do, what's the main thing you want to see: keeping track of your trucks and drivers, or routes for fuel and tolls?",
+    note: "Highest intent: they asked for this. Be quick and confident. Their fleet size is on the form, so you'll confirm it rather than ask cold.",
+    guard: "They came to us. Don't ask permission to talk.",
+    get options() { return [...INTEREST_OPTS, ...INBOUND_EXITS]; },
+  },
+  in_op_tpapp: {
+    title: "Opener: TP App Lead Form",
+    stepAs: "in_opener",
+    script: "Hey [first name], it's [your name] from Trucker Path. You asked about a plan for your team in the Trucker Path app, so I wanted to reach out personally. How many trucks are you looking to set up?",
+    note: "They already use the app and want it for a team. The form doesn't have fleet size, so get it first: 1–2 trucks goes to the owner-operator team. They'll expect to talk team setup, drivers and pricing.",
+    guard: "Don't quote a price here. If they ask, use \"How much is it?\" and book the specialist to build it for their fleet.",
+    options: [
+      { label: "1–2 trucks", next: "in_owner_op_end", tone: "warn", sop: { fleet: "no" }, size: "1-2", skip: ["in_trucks"], sub: "Owner-operator: Diamond plan, hand to the Jr. AE team." },
+      { label: "3–10 trucks", ack: "Okay, perfect. Then the fleet side is the right fit.", next: "in_book", tone: "go", sop: { fleet: "yes" }, size: "3-10", skip: ["in_trucks"] },
+      { label: "11–50 trucks", ack: "Okay, perfect. Then the fleet side is the right fit.", next: "in_book", tone: "go", sop: { fleet: "yes" }, size: "11-50", skip: ["in_trucks"] },
+      { label: "50+ trucks", ack: "Oh nice, that's a solid operation.", next: "in_book", tone: "go", sop: { fleet: "yes" }, size: "50+", skip: ["in_trucks"] },
+      { label: "How much is it?", next: "obj:price", tone: "warn" },
+      ...INBOUND_EXITS,
+    ],
+  },
+  in_op_trial: {
+    title: "Opener: NavPro Incomplete Trial",
+    stepAs: "in_opener",
+    script: "Hey [first name], it's [your name] from Trucker Path. I noticed you were looking at NavPro for your fleet, and I wanted to see if you had any questions about getting started.",
+    note: "They got as far as the card step. Low pressure: offer help, then book the specialist to set it up with them. If HubSpot says \"Myself\" for who'll use it, they may be an owner-operator.",
+    guard: "Never say \"you abandoned\" or \"you didn't finish\".",
+    options: [
+      { label: "Has a question", ack: "Happy to help with that.", next: "in_trial_help", tone: "go" },
+      { label: "Got busy / forgot", ack: "Totally get it, it happens.", next: "in_trucks", tone: "go" },
+      { label: "Decided against it", next: "obj:not_interested", tone: "warn" },
+      ...INBOUND_EXITS,
+    ],
+  },
+  in_trial_help: {
+    title: "What came up?",
+    script: "Of course. What came up when you were setting it up?",
+    note: "Let them say it. The usual ones: the card step, how many seats, how the drivers get the app. Don't troubleshoot billing on this call: the specialist sets it up with them.",
+    options: [
+      { label: "Card / billing / plans", ack: "Good question. Our specialist can walk you through the plans and get it set up with you.", next: "in_trucks", tone: "go" },
+      { label: "How it works / getting drivers on", ack: "That's exactly what our specialist will show you.", next: "in_trucks", tone: "go", pains: ["tracking"] },
+      { label: "Wasn't sure it fits", ack: "Fair enough. Let's make sure it does.", next: "in_trucks", tone: "warn" },
+      { label: "How much is it?", next: "obj:price", tone: "warn" },
+    ],
+  },
+  in_op_cs: {
+    title: "Opener: Affiliate - CS",
+    stepAs: "in_opener",
+    script: "Hey [first name], it's [your name] from Trucker Path. [CSM name] mentioned you might be interested in NavPro for your fleet. What did you two talk about?",
+    note: "Read the CSM context in HubSpot before you dial. Pre-qualified and warm: don't let it cool.",
+    guard: "Don't start from scratch or make them repeat what they told the CSM.",
+    options: [
+      { label: "Tracking trucks and drivers", ack: "Perfect, that helps a lot.", next: "in_trucks", tone: "go", pains: ["tracking"], set: { interest: "tracking" } },
+      { label: "Routes, fuel and tolls", ack: "Perfect, that helps a lot.", next: "in_trucks", tone: "go", pains: ["restricted", "fuel", "tolls"], set: { interest: "routes" } },
+      { label: "Both", ack: "Perfect, that helps a lot.", next: "in_trucks", tone: "go", pains: ["tracking", "restricted", "fuel", "tolls"], set: { interest: "both" } },
+      { label: "Doesn't remember the details", ack: "No worries at all.", next: "in_remind", tone: "warn" },
+      ...INBOUND_EXITS,
+    ],
+  },
+  in_op_tlweb: {
+    title: "Opener: Truckloads-Web",
+    stepAs: "in_opener",
+    script: "Hey [first name], it's [your name] from Trucker Path. You asked for a demo on the Truckloads dispatch page, so I wanted to reach out personally. Is it more for keeping track of your trucks and drivers, or routes for fuel and tolls?",
+    note: "They know Truckloads. Tie it to how they dispatch today. 3+ trucks is a fleet demo; 1–2 trucks goes to the Truckloads / owner-operator team.",
+    guard: "They came to us. Don't ask permission to talk.",
+    get options() { return [...INTEREST_OPTS, { label: "They're after loads / load board", next: "in_loads", tone: "warn" }, ...INBOUND_EXITS]; },
+  },
+  in_op_partner: {
+    title: "Opener: Affiliate - Partner",
+    stepAs: "in_opener",
+    script: "Hey [first name], it's [your name] from Trucker Path. I see [partner name] connected us. They thought NavPro could be a good fit for your fleet. Is it more for keeping track of your trucks and drivers, or routes for fuel and tolls?",
+    note: "Check which partner in HubSpot (NAIT, a trucking school, Northland…) and name them. Don't make them repeat what they told the partner.",
+    get options() { return [...INTEREST_OPTS, ...INBOUND_EXITS]; },
+  },
+  in_op_fb: {
+    title: "Opener: Facebook Ads",
+    stepAs: "in_opener",
+    script: "Hey [first name], it's [your name] from Trucker Path. You filled out our form on Facebook about [what the ad offered], so I wanted to reach out personally. Is it more for keeping track of your trucks and drivers, or routes for fuel and tolls?",
+    note: "Check the campaign or ad in HubSpot first. They only know the ad, not the whole product. If there's no campaign info, say \"about truck navigation for your fleet\".",
+    get options() { return [...INTEREST_OPTS, ...INBOUND_EXITS]; },
+  },
+  in_op_driver: {
+    title: "Opener: Affiliate - Driver",
+    stepAs: "in_opener",
+    script: "Hey [first name], it's [your name] from Trucker Path. One of the drivers who uses our app passed your name along. They thought NavPro could help your fleet. Are you the one who looks after the trucks and routing over there?",
+    note: "Intent is unknown: they may only know what the driver told them. Confirm they run the trucks before anything else.",
+    guard: "Don't say they asked for a call. A driver referred them.",
+    options: [
+      { label: "That's me", ack: "Perfect.", next: "in_trucks", tone: "go", bant: { authority: "yes" }, sop: { dm: "yes" } },
+      { label: "Someone else handles it", next: "obj:need_owner", tone: "warn" },
+      { label: "Company driver, doesn't run trucks", next: "in_driver_only", tone: "stop" },
+      { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
+      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
+    ],
+  },
+  /* Cold call sources */
+  out_source: {
+    title: "Lead source",
+    pre: true,
+    script: "Before you dial, open the contact in HubSpot and check Trucker Path Source. Pick it below.",
+    note: "Don't read this out. Most cold calls are FMCSA Silicon. Command and Truckloads App users already know Trucker Path, so they get their own opener.",
+    options: [
+      { label: "FMCSA Silicon", sub: "Cold: public FMCSA data, may have opened our emails", next: "opener", tone: "go", set: { source: "FMCSA Silicon", srcKey: "fmcsa" } },
+      { label: "Command", sub: "Uses our Command TMS: NavPro cross-sell", next: "op_command", tone: "go", set: { source: "Command", srcKey: "command" } },
+      { label: "Truckloads App", sub: "Verified Truckloads user: NavPro cross-sell", next: "op_tlapp", tone: "go", set: { source: "Truckloads App", srcKey: "tlapp" } },
+      { label: "Legacy import", sub: "FMCSA (Legacy) or WEX 10-4", next: "op_legacy", tone: "warn", set: { source: "Legacy import", srcKey: "legacy" } },
+    ],
+  },
+  op_command: {
+    title: "Opener: Command user",
+    stepAs: "opener",
+    script: "Hi [first name], this is [your name] with Trucker Path, the team behind Command. Quick question: once a load's dispatched, how do your drivers get their route?",
+    note: "Lead with value, then ask. They know Trucker Path, but may not know NavPro.",
+    guard: "Don't make it sound like we're watching their account. Never say \"I see you use Command\" or mention their usage.",
+    options: [
+      { label: "Phone GPS / drivers decide", ack: "Got it, that's really common.", next: "fleet", tone: "go", set: { coldNav: "phone GPS" } },
+      { label: "Something built for trucks", ack: "Oh nice, that's a good setup.", next: "fleet", tone: "go", set: { coldNav: "a truck app" } },
+      { label: "Not sure / not me", next: "gatekeeper_why", tone: "warn" },
+      { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
+      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
+    ],
+  },
+  op_tlapp: {
+    title: "Opener: Truckloads App user",
+    stepAs: "opener",
+    script: "Hi [first name], this is [your name] with Trucker Path. You're on our Truckloads app, and we also have a navigation product called NavPro that carriers use with it. Quick question: how are your drivers handling routing today?",
+    note: "Bridge from the product they know, then ask. Truckloads App leads are often 1–2 trucks: those go to the owner-operator team, not a DQ.",
+    options: [
+      { label: "Phone GPS / drivers decide", ack: "Got it, that's really common.", next: "fleet", tone: "go", set: { coldNav: "phone GPS" } },
+      { label: "Something built for trucks", ack: "Oh nice, that's a good setup.", next: "fleet", tone: "go", set: { coldNav: "a truck app" } },
+      { label: "Just looking for loads", next: "in_loads", tone: "warn", sub: "Goes to the Truckloads check." },
+      { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
+      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
+    ],
+  },
+  op_legacy: {
+    title: "Check it's still active",
+    pre: true,
+    script: "Legacy data can be old. Before you dial, check the company's operating status in FMCSA.",
+    note: "Don't read this out. Only call legacy leads that are still active.",
+    options: [
+      { label: "Still active", next: "opener", tone: "go" },
+      { label: "Out of business / inactive", next: "end_lost", tone: "stop", dq: "Out of business/Not in trucking" },
+      { label: "Already a customer", next: "end_existing", tone: "stop" },
+    ],
   },
   /* ---------- Inbound lead: they came to us. Book the demo first, qualify after. ---------- */
   in_opener: {
@@ -878,7 +1059,9 @@ const flow = {
   in_trucks: {
     title: "Number of trucks",
     // Asked before booking: the truck count decides fleet demo vs the owner-operator team.
-    build: () => state.demo ? "First, how many trucks are you running right now?" : "And just so I point you to the right person... how many trucks are you running right now?",
+    build: () => FORM_SIZE.includes(state.details.srcKey)
+      ? (state.demo ? "First, " : "And ") + "I see [fleet size from the form] trucks on the form. Is that still about right?"
+      : state.demo ? "First, how many trucks are you running right now?" : "And just so I point you to the right person... how many trucks are you running right now?",
     warnings: false,
     options: [
       { label: "1–2 trucks", next: "in_owner_op_end", tone: "warn", sop: { fleet: "no" }, size: "1-2", sub: "Owner-operator: hand to the Jr. AE team, no fleet demo." },
@@ -1396,7 +1579,7 @@ let state, history, timerStart = null, timerId = null;
 
 function freshState(mode = "inbound") {
   return {
-    mode, asked: [], answered: [], cardId: MODES[mode].main[0], objectionId: null, variant: {}, log: [], persona: null, dq: null, ack: null, size: null, pains: [], details: {},
+    mode, asked: [], answered: [], cardId: MODES[mode].start || MODES[mode].main[0], objectionId: null, variant: {}, log: [], persona: null, dq: null, ack: null, size: null, pains: [], details: {},
     bant: { budget: "unknown", authority: "unknown", need: "unknown", timeline: "unknown" },
     sop: { fleet: "unknown", dm: "unknown", pain: "unknown", timeline: "unknown", budget: "unknown" },
   };
@@ -1416,9 +1599,10 @@ function fill(text) {
    would make the rep re-ask a question that's already been passed, so those
    move forward. "pain" moves one step further: they've opened up, so skip the
    question that was fishing for it. Everything later resumes the same card. */
+const SOURCE_OPENERS = { in_op_home: "in_book", in_op_tpapp: "in_book", in_op_trial: "in_book", in_trial_help: "in_book", in_op_cs: "in_book", in_op_tlweb: "in_book", in_op_partner: "in_book", in_op_fb: "in_book", in_op_driver: "in_book", op_command: "fleet", op_tlapp: "fleet" };
 const AFTER_OBJECTION = {
-  continue: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "fleet" },
-  pain: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "fleet", fleet: "reason", reason: "pitch", pitch: "setup_q", setup_q: "cta", setup_q2: "cta", followup_fine: "cta" },
+  continue: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "fleet", ...SOURCE_OPENERS },
+  pain: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "fleet", ...SOURCE_OPENERS, fleet: "reason", reason: "pitch", pitch: "setup_q", setup_q: "cta", setup_q2: "cta", followup_fine: "cta" },
 };
 
 function afterObjection(kind) {
@@ -1429,6 +1613,8 @@ function afterObjection(kind) {
 function routeFor(next) {
   if (next === "after_pain") return state.mode === "inbound" ? "in_role" : "cta";
   if (next === "after_trucks") return state.demo ? "in_why" : "in_book";
+  // Truckloads / Command users with 1–2 trucks go to the owner-operator team, not a DQ.
+  if (next === "small_fleet") return ["tlapp", "command"].includes(state.details.srcKey) ? "in_owner_op_end" : "end_out_of_campaign";
   // Cold call: "book" is the CTA until a demo is agreed; "timing's off" becomes a callback.
   if (state.mode !== "inbound" && next === "book") return state.demo ? "confirm" : "cta";
   if (state.mode !== "inbound" && next === "timeline") return "callback";
@@ -1604,9 +1790,10 @@ function render() {
   el.className = "panel card" + (isObj ? " objection" : "") + (card.end ? " end" : "") + (card.stop ? " stopcard" : "");
 
   const main = MODES[state.mode].main;
-  const idx = main.indexOf(state.cardId);
+  const idx = main.indexOf(card.stepAs || state.cardId);
   let head;
   if (isObj) head = `<span class="chip obj">Objection</span><span class="step">during ${esc(flow[state.cardId].title)}</span>`;
+  else if (card.pre) head = `<span class="chip branch">Before you dial</span>`;
   else if (card.end) head = card.stop ? `<span class="chip stopped">Call ended</span>` : `<span class="chip done">Call ended</span>`;
   else if (idx >= 0) head = `<span class="step">Step ${idx + 1} of ${main.length}</span><span class="progress" aria-hidden="true">${main.map((_, i) => `<span class="${i <= idx ? "on" : ""}"></span>`).join("")}</span>`;
   else head = `<span class="chip branch">Branch</span>`;
@@ -1795,6 +1982,7 @@ function summary() {
     );
   }
   lines.push(`CALL NOTES (${MODES[state.mode].label.toLowerCase()})`);
+  if (d.source) lines.push("Lead source: " + d.source);
   lines.push("Outcome: " + (card.end ? card.title : "In progress, at " + card.title));
   if (card.crm) lines.push("HubSpot: " + crmText(card));
   if (timerStart) lines.push("Duration: " + $("timer").textContent);
