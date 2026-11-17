@@ -772,12 +772,13 @@ const flow = {
   in_op_trial: {
     title: "Opener: NavPro Incomplete Trial",
     stepAs: "in_opener",
-    script: "Hey [first name], it's [your name] from Trucker Path. I saw you were checking out the NavPro free trial, so I wanted to reach out personally. Good news: you can do the free trial with one of our specialists, and you don't need a credit card. They'll set it up with you and show you how it works for your trucks. Want me to set that up for you?",
-    note: "They got to the credit card step and stopped. The no-card trial with a specialist takes that worry away, so lead with it. Then get the truck count and book the time. If HubSpot says \"Myself\" for who'll use it, they may be an owner-operator.",
+    script: "Hey [first name], it's [your name] from Trucker Path. I saw you were checking out the NavPro free trial, so I wanted to reach out personally. Here's the good news: you can skip the credit card. I'll set you up with one of our specialists. They'll start your free trial with you, no card needed, and show you how it works for your trucks. Would [day] at [time] or [day] at [time] work better for you?",
+    note: "They got to the credit card step and stopped. Lead with \"skip the credit card\", then offer two real times and STOP. The truck count comes right after they pick. If HubSpot says \"Myself\" for who'll use it, they may be an owner-operator.",
     guard: "Never say \"you abandoned\", \"you didn't finish\" or \"you didn't put your card in\". Don't promise what happens after the trial or quote a price.",
     options: [
-      { label: "Yes, set it up", ack: "Awesome. Just so I set it up right for you...", next: "in_trucks", tone: "go" },
-      { label: "Worried about being charged", ack: "Totally fair, that's exactly why we do it this way. No card needed, our specialist sets it up with you.", next: "in_trucks", tone: "go" },
+      { label: "Picks a time", ack: "Perfect, you're locked in. Just so our specialist can set it up right for you...", next: "in_trucks", tone: "go", demo: "later", sub: "Type the day, time and time zone in the notes box." },
+      { label: "Worried about being charged", ack: "Totally fair, that's exactly why we do it this way. No card, our specialist sets it all up with you. Would [day] at [time] or [day] at [time] be better?", next: "resume", tone: "warn", sub: "Stay here and get a time." },
+      { label: "Neither time works", next: "in_later", tone: "warn" },
       { label: "Has a question first", ack: "Of course, happy to help.", next: "in_trial_help", tone: "warn" },
       { label: "How much is it after?", next: "obj:price", tone: "warn" },
       { label: "Decided against it", next: "obj:not_interested", tone: "warn" },
