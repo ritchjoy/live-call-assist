@@ -528,7 +528,7 @@ const DEMO_LINES = {
 
 // Inbound lead flow (they came to us): their priority, truck count (decides fleet vs owner-operator), book the demo, then qualify.
 const INBOUND_FLOW = ["in_opener", "in_trucks", "in_book", "in_why", "pain_dig", "pain_impact", "pain_confirm", "in_role", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
-const MODES = { inbound: { label: "Inbound lead", main: INBOUND_FLOW, start: "in_source" }, outbound: { label: "Cold call", main: MAIN_FLOW, start: "out_source" } };
+const MODES = { inbound: { label: "Inbound lead", main: INBOUND_FLOW, start: "in_source" }, outbound: { label: "Cold call", main: MAIN_FLOW } };
 
 
 // Setup questions: ask what their current setup does, never tell them what it can't do. Built from the
@@ -692,7 +692,7 @@ const flow = {
       { label: "3–10 trucks", ack: "Okay, perfect.", next: "reason", tone: "go", sop: { fleet: "yes" }, size: "3-10" },
       { label: "11–50 trucks", ack: "Okay, perfect.", next: "reason", tone: "go", sop: { fleet: "yes" }, size: "11-50" },
       { label: "50+ trucks", ack: "Oh nice, that's a solid operation.", next: "reason", tone: "go", sop: { fleet: "yes" }, size: "50+" },
-      { label: `Fewer than ${CAMPAIGN.minTrucks} trucks`, next: "small_fleet", tone: "stop", sop: { fleet: "no" }, size: "1-2" },
+      { label: `Fewer than ${CAMPAIGN.minTrucks} trucks`, next: "end_out_of_campaign", tone: "stop", sop: { fleet: "no" } },
       { label: "Rather not say", ack: "No worries at all.", next: "reason", tone: "warn", sop: { fleet: "unknown" } },
       { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
       { label: "Not interested", next: "obj:not_interested", tone: "warn" },
@@ -841,57 +841,6 @@ const flow = {
       { label: "Company driver, doesn't run trucks", next: "in_driver_only", tone: "stop" },
       { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
       { label: "Not interested", next: "obj:not_interested", tone: "warn" },
-    ],
-  },
-  /* Cold call sources */
-  out_source: {
-    title: "Lead source",
-    pre: true,
-    script: "Before you dial, open the contact in HubSpot and check Trucker Path Source. Pick it below.",
-    note: "Don't read this out. Most cold calls are FMCSA Silicon. Command and Truckloads App users already know Trucker Path, so they get their own opener.",
-    options: [
-      { label: "FMCSA Silicon", sub: "Cold: public FMCSA data, may have opened our emails", next: "opener", tone: "go", set: { source: "FMCSA Silicon", srcKey: "fmcsa" } },
-      { label: "Command", sub: "Uses our Command TMS: NavPro cross-sell", next: "op_command", tone: "go", set: { source: "Command", srcKey: "command" } },
-      { label: "Truckloads App", sub: "Verified Truckloads user: NavPro cross-sell", next: "op_tlapp", tone: "go", set: { source: "Truckloads App", srcKey: "tlapp" } },
-      { label: "Legacy import", sub: "FMCSA (Legacy) or WEX 10-4", next: "op_legacy", tone: "warn", set: { source: "Legacy import", srcKey: "legacy" } },
-    ],
-  },
-  op_command: {
-    title: "Opener: Command user",
-    stepAs: "opener",
-    script: "Hi [first name], this is [your name] with Trucker Path, the team behind Command. Quick question: once a load's dispatched, how do your drivers get their route?",
-    note: "Lead with value, then ask. They know Trucker Path, but may not know NavPro.",
-    guard: "Don't make it sound like we're watching their account. Never say \"I see you use Command\" or mention their usage.",
-    options: [
-      { label: "Phone GPS / drivers decide", ack: "Got it, that's really common.", next: "fleet", tone: "go", set: { coldNav: "phone GPS" } },
-      { label: "Something built for trucks", ack: "Oh nice, that's a good setup.", next: "fleet", tone: "go", set: { coldNav: "a truck app" } },
-      { label: "Not sure / not me", next: "gatekeeper_why", tone: "warn" },
-      { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
-      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
-    ],
-  },
-  op_tlapp: {
-    title: "Opener: Truckloads App user",
-    stepAs: "opener",
-    script: "Hi [first name], this is [your name] with Trucker Path. You're on our Truckloads app, and we also have a navigation product called NavPro that carriers use with it. Quick question: how are your drivers handling routing today?",
-    note: "Bridge from the product they know, then ask. Truckloads App leads are often 1–2 trucks: those go to the owner-operator team, not a DQ.",
-    options: [
-      { label: "Phone GPS / drivers decide", ack: "Got it, that's really common.", next: "fleet", tone: "go", set: { coldNav: "phone GPS" } },
-      { label: "Something built for trucks", ack: "Oh nice, that's a good setup.", next: "fleet", tone: "go", set: { coldNav: "a truck app" } },
-      { label: "Just looking for loads", next: "in_loads", tone: "warn", sub: "Goes to the Truckloads check." },
-      { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
-      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
-    ],
-  },
-  op_legacy: {
-    title: "Check it's still active",
-    pre: true,
-    script: "Legacy data can be old. Before you dial, check the company's operating status in FMCSA.",
-    note: "Don't read this out. Only call legacy leads that are still active.",
-    options: [
-      { label: "Still active", next: "opener", tone: "go" },
-      { label: "Out of business / inactive", next: "end_lost", tone: "stop", dq: "Out of business/Not in trucking" },
-      { label: "Already a customer", next: "end_existing", tone: "stop" },
     ],
   },
   /* ---------- Inbound lead: they came to us. Book the demo first, qualify after. ---------- */
@@ -1599,7 +1548,7 @@ function fill(text) {
    would make the rep re-ask a question that's already been passed, so those
    move forward. "pain" moves one step further: they've opened up, so skip the
    question that was fishing for it. Everything later resumes the same card. */
-const SOURCE_OPENERS = { in_op_home: "in_book", in_op_tpapp: "in_book", in_op_trial: "in_book", in_trial_help: "in_book", in_op_cs: "in_book", in_op_tlweb: "in_book", in_op_partner: "in_book", in_op_fb: "in_book", in_op_driver: "in_book", op_command: "fleet", op_tlapp: "fleet" };
+const SOURCE_OPENERS = { in_op_home: "in_book", in_op_tpapp: "in_book", in_op_trial: "in_book", in_trial_help: "in_book", in_op_cs: "in_book", in_op_tlweb: "in_book", in_op_partner: "in_book", in_op_fb: "in_book", in_op_driver: "in_book" };
 const AFTER_OBJECTION = {
   continue: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "fleet", ...SOURCE_OPENERS },
   pain: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "fleet", ...SOURCE_OPENERS, fleet: "reason", reason: "pitch", pitch: "setup_q", setup_q: "cta", setup_q2: "cta", followup_fine: "cta" },
@@ -1613,8 +1562,6 @@ function afterObjection(kind) {
 function routeFor(next) {
   if (next === "after_pain") return state.mode === "inbound" ? "in_role" : "cta";
   if (next === "after_trucks") return state.demo ? "in_why" : "in_book";
-  // Truckloads / Command users with 1–2 trucks go to the owner-operator team, not a DQ.
-  if (next === "small_fleet") return ["tlapp", "command"].includes(state.details.srcKey) ? "in_owner_op_end" : "end_out_of_campaign";
   // Cold call: "book" is the CTA until a demo is agreed; "timing's off" becomes a callback.
   if (state.mode !== "inbound" && next === "book") return state.demo ? "confirm" : "cta";
   if (state.mode !== "inbound" && next === "timeline") return "callback";
