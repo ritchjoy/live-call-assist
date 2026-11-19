@@ -527,7 +527,7 @@ const DEMO_LINES = {
 };
 
 // Inbound lead flow (they came to us): their priority, truck count (decides fleet vs owner-operator), book the demo, then qualify.
-const INBOUND_FLOW = ["in_opener", "in_trucks", "in_book", "in_why", "in_role", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
+const INBOUND_FLOW = ["in_opener", "in_trucks", "in_book", "in_role", "in_why", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
 const MODES = { inbound: { label: "Inbound lead", main: INBOUND_FLOW, start: "in_source" }, outbound: { label: "Cold call", main: MAIN_FLOW } };
 
 
@@ -909,8 +909,8 @@ const flow = {
     script: "I'd love to set up a free, consultation demo with one of our specialists. During the demo, they'll show you how it works for your situation. If you're trying to keep drivers on truck-safe routes and out of restricted roads, they'll show you how routing and custom locations work for your trucks. If you're watching fuel costs, they'll show you the fuel discounts and controls. And if you're looking at dashboards and reporting, they'll show you what your team would see day to day. Would [day] at [time] or [day] at [time] work better, and what time zone are you in?",
     note: "Offer two real times, not a yes/no. Type the day, time and time zone in the notes box.",
     options: [
-      { label: "Picks one of the times", ack: "Perfect, you're locked in. So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute.", next: "in_why", tone: "go", demo: "later", sub: "Type the day, time and time zone in the notes box." },
-      { label: "Can do it right now", ack: "Awesome. So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute.", next: "in_why", tone: "go", demo: "now" },
+      { label: "Picks one of the times", ack: "Perfect, you're locked in. So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute.", next: "in_role", tone: "go", demo: "later", sub: "Type the day, time and time zone in the notes box." },
+      { label: "Can do it right now", ack: "Awesome. So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute.", next: "in_role", tone: "go", demo: "now" },
       { label: "Neither time works", next: "in_later", tone: "warn" },
       { label: "Send me info first", next: "obj:send_email", tone: "warn" },
       { label: "Need to check with the owner", next: "obj:need_owner", tone: "warn" },
@@ -923,21 +923,23 @@ const flow = {
     script: "No problem at all. What time works best for 5 to 10 minutes, later today or tomorrow? I'll lock it in.",
     note: "Get a specific time. Later today beats tomorrow.",
     options: [
-      { label: "Agrees a time", ack: "Perfect, you're locked in. So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute.", next: "in_why", tone: "go", demo: "later" },
+      { label: "Agrees a time", ack: "Perfect, you're locked in. So our specialist can tailor the demo to you, I just need a few quick details... it'll only take a minute.", next: "in_role", tone: "go", demo: "later" },
       { label: "Send me info first", next: "obj:send_email", tone: "warn" },
       { label: "Not interested", next: "obj:not_interested", tone: "warn" },
     ],
   },
   in_why: {
-    title: "What made them look",
-    // If the opener told us their priority, build on it instead of asking again.
+    title: "The one thing they'd fix",
+    // Same idea as the cold call's challenge question: one open question, in their role. Builds on what they picked in the opener.
     build: () => ({
-      tracking: "You mentioned keeping track of your trucks and drivers... what's going on there right now?",
-      routes: "You mentioned routes, fuel and tolls... what's going on there right now?",
-      both: "You mentioned tracking and routes... which one's the bigger one for you right now?",
-    })[state.details.interest] || "And what made you start looking at a truck navigation tool?",
+      tracking: "You mentioned keeping track of your trucks and drivers. ",
+      routes: "You mentioned routes, fuel and tolls. ",
+      both: "You mentioned tracking and routes. ",
+    }[state.details.interest] || "") + "If you could fix one thing in your day as " +
+      ({ owner: "an owner", ops: "a fleet manager", safety: "a safety manager", dispatcher: "a dispatcher", driver: "a driver" }[state.persona] || "someone running the trucks") +
+      ", what would it be? Anything that comes to mind.",
     warnings: false,
-    asks: [["If it doesn't land, try", ["What's the biggest headache running your trucks day to day right now?"]]],
+    asks: [["If they answer, one follow-up at most", ["Tell me more about that. How often does that come up?"]], ["If it doesn't land, try", ["What's the biggest headache running your trucks day to day right now?"]]],
     painPick: ["restricted", "fuel", "tolls", "tracking", "parking", "ifta", "insurance", "lastmile"],
     note: "One question, then let them talk. Tick what they mention and type their words in the notes box. One answer is enough: the specialist digs deeper on the demo. The opener pre-ticked what they picked, so untick anything they don't confirm.",
     guard: "Don't pitch here, and don't keep digging. The demo is booked; this is for the specialist.",
@@ -966,12 +968,12 @@ const flow = {
     title: "Position",
     script: "And what's your role there? Are you more on the owner side, running the fleet, safety, or dispatch?",
     options: [
-      { label: "Owner / Founder", ack: "Got it.", next: "in_eld", tone: "go", persona: "owner", bant: { authority: "yes" }, sop: { dm: "yes" } },
-      { label: "Fleet manager / Ops", ack: "Got it.", next: "in_eld", tone: "go", persona: "ops" },
-      { label: "Safety manager", ack: "Got it.", next: "in_eld", tone: "go", persona: "safety" },
-      { label: "Dispatcher", ack: "Got it.", next: "in_eld", tone: "go", persona: "dispatcher" },
-      { label: "Driver", ack: "Got it.", next: "in_eld", tone: "warn", persona: "driver" },
-      { label: "Office / someone else", ack: "Got it.", next: "in_eld", tone: "warn", persona: "gatekeeper" },
+      { label: "Owner / Founder", ack: "Got it.", next: "in_why", tone: "go", persona: "owner", bant: { authority: "yes" }, sop: { dm: "yes" } },
+      { label: "Fleet manager / Ops", ack: "Got it.", next: "in_why", tone: "go", persona: "ops" },
+      { label: "Safety manager", ack: "Got it.", next: "in_why", tone: "go", persona: "safety" },
+      { label: "Dispatcher", ack: "Got it.", next: "in_why", tone: "go", persona: "dispatcher" },
+      { label: "Driver", ack: "Got it.", next: "in_why", tone: "warn", persona: "driver" },
+      { label: "Office / someone else", ack: "Got it.", next: "in_why", tone: "warn", persona: "gatekeeper" },
     ],
   },
   in_eld: {
@@ -1502,8 +1504,8 @@ function afterObjection(kind) {
 
 // Inbound uses its own booking cards; once the demo is booked, don't ask for it again.
 function routeFor(next) {
-  if (next === "after_pain") return state.mode === "inbound" ? "in_role" : "cta";
-  if (next === "after_trucks") return state.demo ? "in_why" : "in_book";
+  if (next === "after_pain") return state.mode === "inbound" ? "in_eld" : "cta";
+  if (next === "after_trucks") return state.demo ? "in_role" : "in_book";
   // Cold call: "book" is the CTA until a demo is agreed; "timing's off" becomes a callback.
   if (state.mode !== "inbound" && next === "book") return state.demo ? "confirm" : "cta";
   if (state.mode !== "inbound" && next === "timeline") return "callback";
@@ -1574,7 +1576,7 @@ function applyMarks(o) {
    questions they haven't asked yet, one after another, skipping any already
    answered, then on to booking. */
 const QUALIFY = {
-  inbound: ["in_trucks", "in_why", "in_role", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz"],
+  inbound: ["in_trucks", "in_role", "in_why", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz"],
   outbound: ["fleet"],
 };
 
@@ -1583,7 +1585,7 @@ function qualLeft() { return QUALIFY[state.mode].filter((id) => !state.answered.
 // Where to land: skip qualification cards already answered, and don't wrap up an inbound demo that isn't booked.
 function landOn(id) {
   // Booked before the truck count came up (e.g. "What's this about?"): ask it now.
-  if (id === "in_why" && !state.answered.includes("in_trucks")) id = "in_trucks";
+  if (id === "in_role" && !state.answered.includes("in_trucks")) id = "in_trucks";
   if (QUALIFY[state.mode].includes(id) && state.answered.includes(id)) {
     id = qualLeft()[0] || (state.mode === "inbound" ? "in_wrap" : state.demo ? "confirm" : "cta");
   }
