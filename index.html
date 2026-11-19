@@ -527,7 +527,7 @@ const DEMO_LINES = {
 };
 
 // Inbound lead flow (they came to us): their priority, truck count (decides fleet vs owner-operator), book the demo, then qualify.
-const INBOUND_FLOW = ["in_opener", "in_trucks", "in_book", "in_why", "pain_dig", "pain_impact", "pain_confirm", "in_role", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
+const INBOUND_FLOW = ["in_opener", "in_trucks", "in_book", "in_why", "in_role", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
 const MODES = { inbound: { label: "Inbound lead", main: INBOUND_FLOW, start: "in_source" }, outbound: { label: "Cold call", main: MAIN_FLOW } };
 
 
@@ -929,85 +929,24 @@ const flow = {
     ],
   },
   in_why: {
-    title: "Uncover the pain",
+    title: "What made them look",
     // If the opener told us their priority, build on it instead of asking again.
     build: () => ({
-      tracking: "You mentioned keeping track of your trucks and drivers... what's going on there right now? Did something happen?",
-      routes: "You mentioned routes, fuel and tolls... what's going on there right now? Did something happen?",
-      both: "You mentioned tracking and routes... which one's hurting more right now? And what happened?",
+      tracking: "You mentioned keeping track of your trucks and drivers... what's going on there right now?",
+      routes: "You mentioned routes, fuel and tolls... what's going on there right now?",
+      both: "You mentioned tracking and routes... which one's the bigger one for you right now?",
     })[state.details.interest] || "And what made you start looking at a truck navigation tool?",
     warnings: false,
-    // The team's other ways in, if the first question doesn't land.
-    asks: [["If that doesn't land, try", [
-      "What's the biggest headache running your trucks day to day right now?",
-      "If you could fix one thing about how your trucks run, what would it be?",
-      "Walk me through how a load goes, from dispatch to delivery.",
-    ]]],
+    asks: [["If it doesn't land, try", ["What's the biggest headache running your trucks day to day right now?"]]],
     painPick: ["restricted", "fuel", "tolls", "tracking", "parking", "ifta", "insurance", "lastmile"],
-    note: "Ask one, then stop talking. Let them name the pain; never read the list out. If they say \"just looking\", try one of the other questions. The opener pre-ticked what they picked: untick anything they don't confirm.",
+    note: "One question, then let them talk. Tick what they mention and type their words in the notes box. One answer is enough: the specialist digs deeper on the demo. The opener pre-ticked what they picked, so untick anything they don't confirm.",
+    guard: "Don't pitch here, and don't keep digging. The demo is booked; this is for the specialist.",
     options: [
-      { label: "They named something", ack: "Got it.", next: "pain_dig", tone: "go" },
-      { label: "Not sure / just looking", ack: "Totally fair.", next: "pain_prompt", tone: "warn" },
+      { label: "They named something", ack: "Got it, that's really helpful. I'll make sure our specialist covers that.", next: "after_pain", tone: "go", bant: { need: "yes" }, sop: { pain: "yes" } },
+      { label: "Not sure / just looking", ack: "Totally fair, the demo will give you a good look.", next: "after_pain", tone: "warn", sop: { pain: "no" }, sub: "Flag it to the AE: no clear pain yet." },
     ],
   },
 
-  /* ---------- Pain stage (inbound and cold call) ----------
-     Playbook: let the prospect name the pain, get a real example, put a cost
-     on it, then play it back in their words. "after_pain" goes on to the next
-     qualification question for the call type (see routeFor). */
-  pain_prompt: {
-    title: "Help them find it",
-    script: "Walk me through how a load goes for you, from dispatch to delivery.",
-    // One easy question per area. Ask two or three that fit, not all of them.
-    asks: [["Then probe an area", ["fuel", "restricted", "tracking", "parking", "tolls", "ifta", "insurance", "lastmile"].map((k) => PAINS[k].qs[0])]],
-    painPick: ["restricted", "fuel", "tolls", "tracking", "parking", "ifta", "insurance", "lastmile"],
-    note: "Pick two or three questions that fit what they just told you. Situation questions, not a feature list. Tap anything that comes up.",
-    options: [
-      { label: "Something came up", ack: "Okay, that's helpful.", next: "pain_dig", tone: "go" },
-      { label: "Nothing came up", ack: "No worries, the demo will give you a good look anyway.", next: "after_pain", tone: "warn", sop: { pain: "no" }, skip: ["pain_dig", "pain_impact", "pain_confirm"], sub: "Flag it to the AE: no clear pain yet." },
-    ],
-  },
-  pain_dig: {
-    title: "Get a real example",
-    script: "Tell me more about that. How often does that happen?",
-    // Questions for each pain they tapped; if none tapped, the general ones only.
-    asks: () => [
-      ...chosenPains().map((k) => [PAINS[k].label, PAINS[k].qs]),
-      ["Then", ["How are you handling it today?"]],
-    ],
-    note: "Get one real story. \"Last week a driver…\" beats \"sometimes.\" Use the questions for what they named. No features or pitch yet.",
-    options: [
-      { label: "Gives a real example", ack: "Yeah, I hear that a lot.", next: "pain_impact", tone: "go" },
-      { label: "Stays vague", ack: "Got it.", next: "pain_impact", tone: "warn", sub: "Try once more: \"What did that look like the last time?\"" },
-    ],
-  },
-  pain_impact: {
-    title: "What it costs them",
-    script: "What does that cost you, in money or time?",
-    asks: [["Then", ["What happens if it doesn't get fixed?", "Who else feels that problem: dispatch, safety, the drivers?"]]],
-    note: "Get a number if you can: \"$300 ticket\", \"2 hours a day calling drivers\", \"50 extra miles a week\". Type it in the notes box.",
-    guard: "Don't put a number in their mouth, and don't promise a saving.",
-    options: [
-      { label: "Money: tickets, fines, repairs", ack: "Ouch, yeah.", next: "pain_confirm", tone: "go", set: { impact: "tickets, fines or repairs" } },
-      { label: "Fuel or extra miles", ack: "Yeah, that adds up.", next: "pain_confirm", tone: "go", set: { impact: "fuel and extra miles" } },
-      { label: "Time: calls, dispatch, admin", ack: "Yeah, that's a lot of time.", next: "pain_confirm", tone: "go", set: { impact: "time on the phone and admin" } },
-      { label: "Late or missed deliveries", ack: "Yeah, that hurts with customers.", next: "pain_confirm", tone: "go", set: { impact: "late or missed deliveries" } },
-      { label: "Driver frustration / turnover", ack: "Yeah, keeping drivers happy is everything.", next: "pain_confirm", tone: "go", set: { impact: "driver frustration" } },
-      { label: "Can't put a number on it", ack: "That's fair.", next: "pain_confirm", tone: "warn", set: { impact: "not quantified yet" } },
-    ],
-  },
-  pain_confirm: {
-    title: "Play it back",
-    build: () => "So just so I've got it right... the big one for you is [their pain, in their words]" +
-      (state.details.impact && state.details.impact !== "not quantified yet" ? ", and it's costing you in " + state.details.impact : "") +
-      ". Did I get that right?",
-    warnings: false,
-    note: "Use their exact words. If they correct you, that's even better: write the correction in the notes.",
-    options: [
-      { label: "Yes, that's it", ack: "Perfect, that's really helpful.", next: "after_pain", tone: "go", bant: { need: "yes" }, sop: { pain: "yes" } },
-      { label: "Corrects you", ack: "Got it, thanks for clarifying.", next: "after_pain", tone: "go", bant: { need: "yes" }, sop: { pain: "yes" }, sub: "Write their version in the notes box." },
-    ],
-  },
   in_trucks: {
     title: "Number of trucks",
     // Asked before booking: the truck count decides fleet demo vs the owner-operator team.
@@ -1635,7 +1574,7 @@ function applyMarks(o) {
    questions they haven't asked yet, one after another, skipping any already
    answered, then on to booking. */
 const QUALIFY = {
-  inbound: ["in_trucks", "in_why", "pain_dig", "pain_impact", "pain_confirm", "in_role", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz"],
+  inbound: ["in_trucks", "in_why", "in_role", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz"],
   outbound: ["fleet"],
 };
 
