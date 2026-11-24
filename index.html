@@ -528,7 +528,11 @@ const DEMO_LINES = {
 
 // Inbound lead flow (they came to us): their priority, truck count (decides fleet vs owner-operator), book the demo, then qualify.
 const INBOUND_FLOW = ["in_opener", "in_trucks", "in_book", "in_role", "in_why", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
-const MODES = { inbound: { label: "Inbound lead", main: INBOUND_FLOW, start: "in_source" }, outbound: { label: "Cold call", main: MAIN_FLOW } };
+// Cold call v4: a second cold script, side by side with the original. Shares the gatekeeper, callback, objection and end cards.
+const V4_FLOW = ["v4_opener", "v4_fleet", "v4_role", "v4_bg", "v4_tool", "v4_priority", "v4_cta", "v4_details"];
+// Shared cards point at the original cold steps; in v4 those land on the v4 version instead.
+const V4_MAP = { opener: "v4_opener", fleet: "v4_fleet", reason: "v4_role", cta: "v4_cta", details: "v4_details", challenge: "v4_challenge", confirm: "v4_confirm", end_booked: "v4_end_booked" };
+const MODES = { inbound: { label: "Inbound lead", main: INBOUND_FLOW, start: "in_source" }, outbound: { label: "Cold call", main: MAIN_FLOW }, cold_v4: { label: "Cold call v4", main: V4_FLOW } };
 
 
 // Setup questions: ask what their current setup does, never tell them what it can't do. Built from the
@@ -726,6 +730,121 @@ const flow = {
     note: "For the AE handoff, note: fleet size, truck types, their #1 pain in their own words (with a dollar amount if you got one), and their ELD/TMS.",
     guard: "Don't call it booked until the event exists and the invite has gone to the prospect and the AE.",
     options: [{ label: "Event created, invite sent", next: "end_booked", tone: "go" }],
+  },
+  /* ---------- Cold call v4 (separate script; the original cold flow above is unchanged) ---------- */
+  v4_opener: {
+    title: "Opener",
+    script: "Hi [first name], this is [your name] with Trucker Path. Who's in charge of truck routing and dispatch over there?",
+    note: "Sound confident and lead the call.",
+    options: [
+      { label: "That's me", ack: "Oh, you are? Awesome. So yeah, it's just [your name] here.", next: "v4_fleet", tone: "go" },
+      { label: "Someone else is in charge", next: "gatekeeper", tone: "warn" },
+      { label: "\"May I know why you're calling?\"", next: "gatekeeper_why", tone: "warn" },
+      { label: "Busy right now", next: "obj:too_busy", tone: "warn" },
+      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
+      { label: "How did you get my number?", next: "obj:how_number", tone: "warn" },
+    ],
+  },
+  v4_fleet: {
+    title: "How many trucks?",
+    script: "How many trucks are you managing right now?",
+    options: [
+      { label: "3–10 trucks", next: "v4_role", tone: "go", sop: { fleet: "yes" }, size: "3-10" },
+      { label: "11–50 trucks", next: "v4_role", tone: "go", sop: { fleet: "yes" }, size: "11-50" },
+      { label: "50+ trucks", next: "v4_role", tone: "go", sop: { fleet: "yes" }, size: "50+" },
+      { label: "Rather not say", next: "v4_role", tone: "warn", sop: { fleet: "unknown" } },
+      { label: `Fewer than ${CAMPAIGN.minTrucks} trucks`, next: "end_out_of_campaign", tone: "stop", sop: { fleet: "no" } },
+    ],
+  },
+  v4_role: {
+    title: "Role",
+    script: "Just so I know who I'm talking to, what part of the operation do you look after? Owner, fleet manager or ops, safety, or dispatch?",
+    options: [
+      { label: "Owner / Founder", next: "v4_bg", tone: "go", persona: "owner" },
+      { label: "Fleet manager / Ops", next: "v4_bg", tone: "go", persona: "ops" },
+      { label: "Safety manager", next: "v4_bg", tone: "go", persona: "safety" },
+      { label: "Dispatcher", next: "v4_bg", tone: "go", persona: "dispatcher" },
+      { label: "Driver", next: "driver", tone: "warn", persona: "driver" },
+      { label: "Office contact / someone else", next: "gatekeeper", tone: "warn", persona: "gatekeeper" },
+    ],
+  },
+  v4_bg: {
+    title: "Background",
+    script: "So yeah, we're just reaching out to fleets across the trucking industry, mainly because getting drivers on the right routes is getting harder, especially with trucks that have their own height, weight and restrictions, right?\n\nSo I work with a team that helps leaders like you, normally by connecting you with a truck-safe routing and dispatch tool that lets you send routes from your computer and works whether you're on an ELD or not.",
+    note: "Pause after \"right?\" Don't add \"over a million drivers\" until the team confirms it.",
+    options: [
+      { label: "They're with you", next: "v4_tool", tone: "go" },
+    ],
+  },
+  v4_tool: {
+    title: "Tool question",
+    script: "Just curious, do you guys handle routing manually, or do you use some outside tool for it?",
+    note: "Either answer gets the same reply. If they name a tool, such as Google Maps or their ELD, treat it as a tool. Type what they use in the notes box.",
+    options: [
+      { label: "Manually", ack: "I see.", next: "v4_priority", tone: "go", set: { tool: "Manual" } },
+      { label: "Uses a tool", sub: "Google Maps, their ELD, anything they name", ack: "I see.", next: "v4_priority", tone: "go", set: { tool: "Outside tool (see rep notes)" } },
+    ],
+  },
+  v4_priority: {
+    title: "Priority question",
+    script: "What do you normally prioritize? Is it mostly keeping trucks on safe roads, getting routes to drivers faster, saving on fuel costs, or something else?",
+    note: "Let them pick. Something else: ask them to describe it before you move on.",
+    options: [
+      { label: "Keeping trucks on safe roads", ack: "Got it.", next: "v4_cta", tone: "go", set: { priority: "Safe roads" } },
+      { label: "Getting routes to drivers faster", ack: "Got it.", next: "v4_cta", tone: "go", set: { priority: "Routes to drivers faster" } },
+      { label: "Saving on fuel costs", ack: "Got it.", next: "v4_cta", tone: "go", set: { priority: "Fuel costs" } },
+      { label: "Something else", sub: "Ask them to describe it, then type it in the notes box.", ack: "Got it.", next: "v4_cta", tone: "go", set: { priority: "Something else (see rep notes)" } },
+    ],
+  },
+  v4_cta: {
+    title: "CTA",
+    script: "[Repeat their answer in their words.] Since that's what you're focused on, I think a quick 15-minute consultation with one of our specialists makes sense. They'd show you how to send routes straight to your drivers, using your trucks as the example, and where the extra miles are coming from. They can also show you how your drivers compare fuel prices along their route and find truck parking when they're low on hours, and how dispatch can message them right in the app.\n\nWould you be open to that?\n\nIf so, are you free today? If not, would Wednesday or Friday work better?",
+    note: "Offer \"today\" only if the specialist can take a same-day slot. Ask the yes/no question, then wait before offering the days.",
+    guard: "Never promise results, savings or compliance. No price.",
+    options: [
+      { label: "Picks today, Wednesday or Friday", ack: "Perfect, you're locked in. So our specialist can tailor it to you, just a couple of quick details.", next: "v4_details", tone: "go", demo: "later", sub: "Type the day, time and time zone in the notes box." },
+      { label: "Hesitant", next: "cta_hesitant", tone: "warn" },
+      { label: "Neither day works", next: "callback", tone: "warn" },
+      { label: "Send me info first", next: "obj:send_email", tone: "warn" },
+      { label: "Not interested", next: "obj:not_interested", tone: "warn" },
+    ],
+  },
+  v4_details: {
+    title: "After they say yes: equipment and ELD",
+    script: "What kind of equipment are you running, and what ELD are you on?",
+    note: "Type the equipment (flatbed, reefer, dry van, hazmat) and their ELD in the notes box.",
+    options: [
+      { label: "Shares equipment and ELD", ack: "Okay, perfect.", next: "v4_challenge", tone: "go" },
+      { label: "Rather not say", ack: "No worries at all.", next: "v4_challenge", tone: "warn" },
+    ],
+  },
+  v4_challenge: {
+    title: "After they say yes: biggest challenge",
+    stepAs: "v4_details",
+    build: () => "What's the biggest challenge in your day as " + ({ owner: "an owner", ops: "a fleet manager", safety: "a safety manager", dispatcher: "a dispatcher" }[state.persona] || "someone running the trucks") + "?",
+    warnings: false,
+    painPick: ["restricted", "fuel", "tolls", "tracking", "parking", "lastmile", "insurance", "ifta"],
+    note: "Type their answer in their own words in the notes box. Tick what they mention.",
+    guard: "Don't pitch a fix here. The demo is booked; this is for the specialist.",
+    options: [
+      { label: "Shares a challenge", ack: "That's really helpful. I'll make sure our specialist covers that.", next: "v4_confirm", tone: "go" },
+      { label: "Nothing comes to mind", ack: "No worries at all.", next: "v4_confirm", tone: "warn" },
+    ],
+  },
+  v4_confirm: {
+    title: "After they say yes: confirm the invite",
+    stepAs: "v4_details",
+    script: "I'll send the invite to [work email] for [day, time and time zone]. Should anyone else be on it, so the right people are in the room?",
+    note: "For the AE handoff, note: fleet size, role, their priority, equipment, ELD, and their biggest challenge in their own words.",
+    guard: "Don't call it booked until the event exists and the invite has gone to the prospect and the AE.",
+    options: [{ label: "Event created, invite sent", next: "v4_end_booked", tone: "go" }],
+  },
+  v4_end_booked: {
+    title: "Demo booked",
+    end: true,
+    script: "I'm going to send the invite now. Kindly accept it when it comes through, so our account executive knows you'll be attending. Thanks so much, [first name], have a good one!",
+    crm: { stage: "Deal Created" },
+    note: "Create the deal, associate company and contact, invite the AE. You own it until the demo is attended.",
   },
   /* ---------- Lead source: picked before dialing. Each source gets its own opener (Lead Journey playbook), then joins the main flow. ---------- */
   in_source: {
@@ -1494,8 +1613,9 @@ function fill(text) {
    question that was fishing for it. Everything later resumes the same card. */
 const SOURCE_OPENERS = { in_op_home: "in_book", in_op_tpapp: "in_book", in_op_trial: "in_book", in_trial_help: "in_book", in_op_cs: "in_book", in_op_tlweb: "in_book", in_op_partner: "in_book", in_op_fb: "in_book", in_op_driver: "in_book" };
 const AFTER_OBJECTION = {
-  continue: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "fleet", ...SOURCE_OPENERS },
-  pain: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "fleet", ...SOURCE_OPENERS, fleet: "reason", reason: "pitch", pitch: "setup_q", setup_q: "cta", setup_q2: "cta", followup_fine: "cta" },
+  continue: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "fleet", ...SOURCE_OPENERS, v4_opener: "v4_fleet" },
+  pain: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "fleet", ...SOURCE_OPENERS, fleet: "reason", reason: "pitch", pitch: "setup_q", setup_q: "cta", setup_q2: "cta", followup_fine: "cta",
+    v4_opener: "v4_fleet", v4_fleet: "v4_role", v4_role: "v4_bg", v4_bg: "v4_tool", v4_tool: "v4_priority", v4_priority: "v4_cta" },
 };
 
 function afterObjection(kind) {
@@ -1504,6 +1624,10 @@ function afterObjection(kind) {
 
 // Inbound uses its own booking cards; once the demo is booked, don't ask for it again.
 function routeFor(next) {
+  const r = routeBase(next);
+  return state.mode === "cold_v4" ? V4_MAP[r] || r : r;
+}
+function routeBase(next) {
   if (next === "after_pain") return state.mode === "inbound" ? "in_eld" : "cta";
   if (next === "after_trucks") return state.demo ? "in_role" : "in_book";
   // Cold call: "book" is the CTA until a demo is agreed; "timing's off" becomes a callback.
@@ -1578,12 +1702,14 @@ function applyMarks(o) {
 const QUALIFY = {
   inbound: ["in_trucks", "in_role", "in_why", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz"],
   outbound: ["fleet"],
+  cold_v4: ["v4_fleet"],
 };
 
 function qualLeft() { return QUALIFY[state.mode].filter((id) => !state.answered.includes(id)); }
 
 // Where to land: skip qualification cards already answered, and don't wrap up an inbound demo that isn't booked.
 function landOn(id) {
+  if (state.mode === "cold_v4") id = V4_MAP[id] || id;
   // Booked before the truck count came up (e.g. "What's this about?"): ask it now.
   if (id === "in_role" && !state.answered.includes("in_trucks")) id = "in_trucks";
   if (QUALIFY[state.mode].includes(id) && state.answered.includes(id)) {
@@ -1597,6 +1723,7 @@ function landOn(id) {
     return landOn("in_contact");
   }
   if (id === "in_wrap" && !state.demo) id = "in_book";
+  if (state.mode === "cold_v4") id = V4_MAP[id] || id;
   return id;
 }
 
@@ -1877,8 +2004,10 @@ function summary() {
   lines.push("Outcome: " + (card.end ? card.title : "In progress, at " + card.title));
   if (card.crm) lines.push("HubSpot: " + crmText(card));
   if (timerStart) lines.push("Duration: " + $("timer").textContent);
-  if (state.mode === "outbound") {
+  if (state.mode !== "inbound") {
     if (role) lines.push("Role: " + role);
+    if (d.tool) lines.push("Routing today: " + d.tool);
+    if (d.priority) lines.push("Priority: " + d.priority);
     if (state.size) lines.push("Fleet: " + SIZE_LABEL[state.size]);
     if (pains) lines.push("Pains: " + pains);
     if (d.impact) lines.push("Impact: " + d.impact);
