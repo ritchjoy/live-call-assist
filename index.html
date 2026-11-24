@@ -529,7 +529,7 @@ const DEMO_LINES = {
 // Inbound lead flow (they came to us): their priority, truck count (decides fleet vs owner-operator), book the demo, then qualify.
 const INBOUND_FLOW = ["in_opener", "in_trucks", "in_book", "in_role", "in_why", "in_eld", "in_nav", "in_tms", "in_focus", "in_contact", "in_tz", "in_wrap"];
 // Cold call v4: a second cold script, side by side with the original. Shares the gatekeeper, callback, objection and end cards.
-const V4_FLOW = ["v4_opener", "v4_fleet", "v4_role", "v4_bg", "v4_tool", "v4_priority", "v4_cta", "v4_details"];
+const V4_FLOW = ["v4_opener", "v4_fleet", "v4_role", "v4_bg", "v4_priority", "v4_cta", "v4_details"];
 // Shared cards point at the original cold steps; in v4 those land on the v4 version instead.
 const V4_MAP = { opener: "v4_opener", fleet: "v4_fleet", reason: "v4_role", cta: "v4_cta", details: "v4_details", challenge: "v4_challenge", confirm: "v4_confirm", end_booked: "v4_end_booked" };
 const MODES = { inbound: { label: "Inbound lead", main: INBOUND_FLOW, start: "in_source" }, outbound: { label: "Cold call", main: MAIN_FLOW }, cold_v4: { label: "Cold call v4", main: V4_FLOW } };
@@ -769,17 +769,9 @@ const flow = {
     ],
   },
   v4_bg: {
-    title: "Background",
-    script: "So yeah, we're just reaching out to fleets across the trucking industry, mainly because getting drivers on the right routes is getting harder, especially with trucks that have their own height, weight and restrictions, right?\n\nSo I work with a team that helps leaders like you, normally by connecting you with a truck-safe routing and dispatch tool that lets you send routes from your computer and works whether you're on an ELD or not.",
-    note: "Pause after \"right?\" Don't add \"over a million drivers\" until the team confirms it.",
-    options: [
-      { label: "They're with you", next: "v4_tool", tone: "go" },
-    ],
-  },
-  v4_tool: {
-    title: "Tool question",
-    script: "Just curious, do you guys handle routing manually, or do you use some outside tool for it?",
-    note: "Either answer gets the same reply. If they name a tool, such as Google Maps or their ELD, treat it as a tool. Type what they use in the notes box.",
+    title: "Background + tool question",
+    script: "So yeah, we're just reaching out to fleets across the trucking industry, mainly because getting drivers on the right routes is getting harder, especially with trucks that have their own height, weight and restrictions, right?\n\nSo I work with a team that helps leaders like you, normally by connecting you with a truck-safe routing and dispatch tool that lets you send routes from your computer and works whether you're on an ELD or not.\n\nJust curious, do you guys handle routing manually, or do you use some outside tool for it?",
+    note: "Pause after \"right?\" Don't add \"over a million drivers\" until the team confirms it. Either answer to the tool question gets the same reply. If they name a tool, such as Google Maps or their ELD, treat it as a tool. Type what they use in the notes box.",
     options: [
       { label: "Manually", ack: "I see.", next: "v4_priority", tone: "go", set: { tool: "Manual" } },
       { label: "Uses a tool", sub: "Google Maps, their ELD, anything they name", ack: "I see.", next: "v4_priority", tone: "go", set: { tool: "Outside tool (see rep notes)" } },
@@ -1615,7 +1607,7 @@ const SOURCE_OPENERS = { in_op_home: "in_book", in_op_tpapp: "in_book", in_op_tr
 const AFTER_OBJECTION = {
   continue: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "fleet", ...SOURCE_OPENERS, v4_opener: "v4_fleet" },
   pain: { in_opener: "in_book", in_remind: "in_book", in_loads: "in_book", opener: "fleet", ...SOURCE_OPENERS, fleet: "reason", reason: "pitch", pitch: "setup_q", setup_q: "cta", setup_q2: "cta", followup_fine: "cta",
-    v4_opener: "v4_fleet", v4_fleet: "v4_role", v4_role: "v4_bg", v4_bg: "v4_tool", v4_tool: "v4_priority", v4_priority: "v4_cta" },
+    v4_opener: "v4_fleet", v4_fleet: "v4_role", v4_role: "v4_bg", v4_bg: "v4_priority", v4_priority: "v4_cta" },
 };
 
 function afterObjection(kind) {
